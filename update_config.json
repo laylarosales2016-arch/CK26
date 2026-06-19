@@ -1,7 +1,7 @@
 {
   "versionCode": 11,
-  "versionName": "11.0",
-  "downloadUrl": "https://github.com/laylarosales2016-arch/CK26/releases/download/v11/app-release.apk",
+  "versionName": "11",
+  "downloadUrl": "https://github.com/laylarosales2016-arch/CK26/releases/download/v11-11/app-release-unsigned.apk",
   "isForceUpdate": false,
-  "changes": "• Added Kitchen Unit grouping\n• Added SO position support\n• Improved Web Portal Mobile view"
+  "changes": "Auto-generated release from master push."
 }
