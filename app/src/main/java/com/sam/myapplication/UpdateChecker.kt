@@ -23,7 +23,8 @@ data class UpdateInfo(
 )
 
 object UpdateChecker {
-    private const val UPDATE_JSON_URL = "https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/public/updates/update_config.json"
+    // URL to your update_config.json file in your GitHub repository
+    private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/laylarosales2016-arch/CK26/master/update_config.json"
 
     suspend fun checkForUpdates(activity: Activity) {
         val updateInfo = fetchUpdateInfo() ?: return
