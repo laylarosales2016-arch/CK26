@@ -1,0 +1,1 @@
+base64 -w 0 chowking_keystore.jks
