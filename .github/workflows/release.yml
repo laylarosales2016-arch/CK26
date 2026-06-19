@@ -28,6 +28,16 @@ jobs:
       - name: Build APK
         run: ./gradlew assembleRelease
 
+      - name: Sign APK
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Get Version Info
         id: version_info
         run: |
@@ -45,20 +55,21 @@ jobs:
           name: Release ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/release/app-release-unsigned.apk
+          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Update Config JSON
         run: |
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version_info.outputs.tag_name }}/app-release-unsigned.apk"
+          SIGNED_APK_NAME=$(basename ${{ steps.sign_app.outputs.signedReleaseFile }})
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version_info.outputs.tag_name }}/$SIGNED_APK_NAME"
           cat <<EOF > update_config.json
           {
             "versionCode": ${{ env.VERSION_CODE }},
             "versionName": "${{ env.VERSION_NAME }}",
             "downloadUrl": "$DOWNLOAD_URL",
             "isForceUpdate": false,
-            "changes": "Auto-generated release from master push."
+            "changes": "Official Signed Release build."
           }
           EOF
 
