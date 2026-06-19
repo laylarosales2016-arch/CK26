@@ -13,6 +13,8 @@ import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
 import java.net.URL
 
+import android.util.Log
+
 @Serializable
 data class UpdateInfo(
     val versionCode: Int,
@@ -23,11 +25,18 @@ data class UpdateInfo(
 )
 
 object UpdateChecker {
+    private const val TAG = "UpdateChecker"
     // URL to your update_config.json file in your GitHub repository
     private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/laylarosales2016-arch/CK26/master/update_config.json"
 
     suspend fun checkForUpdates(activity: Activity) {
-        val updateInfo = fetchUpdateInfo() ?: return
+        Log.d(TAG, "Checking for updates at $UPDATE_JSON_URL")
+        val updateInfo = fetchUpdateInfo()
+        
+        if (updateInfo == null) {
+            Log.e(TAG, "Failed to fetch update info")
+            return
+        }
 
         val currentVersionCode = try {
             val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
@@ -38,13 +47,19 @@ object UpdateChecker {
                 pInfo.versionCode
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Error getting version info", e)
             0
         }
 
+        Log.d(TAG, "Current Version: $currentVersionCode, Remote Version: ${updateInfo.versionCode}")
+
         if (updateInfo.versionCode > currentVersionCode) {
+            Log.i(TAG, "New version available: ${updateInfo.versionName}")
             withContext(Dispatchers.Main) {
                 showUpdateDialog(activity, updateInfo)
             }
+        } else {
+            Log.d(TAG, "App is up to date")
         }
     }
 
@@ -53,18 +68,22 @@ object UpdateChecker {
             val url = URL(UPDATE_JSON_URL)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.useCaches = false
             
+            Log.d(TAG, "Fetching remote JSON...")
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
+                Log.d(TAG, "JSON received: $jsonString")
                 val json = Json { ignoreUnknownKeys = true }
                 json.decodeFromString<UpdateInfo>(jsonString)
             } else {
+                Log.e(TAG, "HTTP error: ${connection.responseCode}")
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Fetch failed", e)
             null
         }
     }

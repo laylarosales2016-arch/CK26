@@ -1,0 +1,1 @@
+keytool -genkey -v -keystore chowking_keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias chowking_key -storepass ck1433 -keypass YOUR_PASSWORD -dname "CN=Chowking, OU=IT, O=Chowking, L=Manila, S=Manila, C=PH"

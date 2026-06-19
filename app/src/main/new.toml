@@ -1,0 +1,2 @@
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("your-keystore-file.jks"))
+    
