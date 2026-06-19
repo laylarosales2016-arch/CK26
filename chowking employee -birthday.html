@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chowking Attendance Summary | Cosmic Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        space: {
+                            950: '#030712',
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            400: '#9ca3af'
+                        },
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #030712;
+            background-image: linear-gradient(to bottom, rgba(3, 7, 18, 0.85), rgba(11, 15, 25, 0.92)),
+                              url('https://images.unsplash.com/photo-1538370965046-79c0d6907d47?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #f3f4f6;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .loader { border-top-color: #22d3ee; animation: spinner 0.6s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+
+        ::-webkit-scrollbar { height: 6px; width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.01); }
+        ::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.4); }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(140deg);
+            cursor: pointer;
+        }
+        .glass-card {
+            background: rgba(11, 15, 25, 0.65);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        .table-header-text {
+            color: #22d3ee;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.85;
+        }
+        .glass-badge {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 5px 14px;
+            border-radius: 9999px;
+            border: 1px solid transparent;
+        }
+        .badge-emerald { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.25); text-shadow: 0 0 8px rgba(52, 211, 153, 0.3); }
+        .badge-amber { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); text-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
+        .badge-rose { background: rgba(244, 63, 94, 0.12); color: #fb7185; border-color: rgba(244, 63, 94, 0.25); text-shadow: 0 0 8px rgba(251, 113, 133, 0.3); }
+        .badge-cyan { background: rgba(34, 211, 238, 0.12); color: #22d3ee; border-color: rgba(34, 211, 238, 0.25); text-shadow: 0 0 8px rgba(34, 211, 238, 0.3); }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-size: 10px; font-weight: 700; transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.03); background: rgba(255, 255, 255, 0.02); position: relative; }
+        .calendar-day:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.1); }
+        .day-header { font-size: 9px; font-weight: 800; color: #22d3ee; opacity: 0.6; text-transform: uppercase; text-align: center; padding-bottom: 6px; }
+
+        .cal-late { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .cal-overbreak { background: rgba(249, 115, 22, 0.15) !important; color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+        .cal-absent { background: rgba(244, 63, 94, 0.15) !important; color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+        .cal-present { background: rgba(16, 185, 129, 0.1) !important; color: #34d399; }
+        .cal-rd { background: rgba(34, 211, 238, 0.1) !important; color: #22d3ee; }
+        .cal-gold { background: rgba(251, 191, 36, 0.25) !important; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); box-shadow: 0 0 10px rgba(251, 191, 36, 0.2); }
+        .cal-silver { background: rgba(148, 163, 184, 0.15) !important; color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+        .cal-today { border: 2px solid #22d3ee !important; box-shadow: 0 0 15px rgba(34, 211, 238, 0.3); }
+        .cal-empty { opacity: 0; pointer-events: none; }
+        .cal-time { font-size: 7px; color: rgba(255, 255, 255, 0.4); margin-top: 1px; font-weight: 400; line-height: 1; }
+
+        .info-label { font-size: 10px; font-weight: 800; color: #22d3ee; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 4px; display: block; opacity: 0.7; }
+        .info-value { font-size: 15px; font-weight: 600; color: #f3f4f6; }
+        .section-title { font-size: 12px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.2em; padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid rgba(34, 211, 238, 0.2); display: flex; align-items: center; gap: 12px; }
+
+        .shooting-stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+        }
+        .star {
+            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1); animation: animate 3s linear infinite;
+        }
+        .star::before {
+            content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 300px; height: 1px; background: linear-gradient(90deg, #fff, transparent);
+        }
+        @keyframes animate {
+            0% { transform: rotate(315deg) translateX(0); opacity: 1; }
+            70% { opacity: 1; }
+            100% { transform: rotate(315deg) translateX(-1000px); opacity: 0; }
+        }
+        .star:nth-child(1) { top: 0; right: 0; left: initial; animation-delay: 0s; animation-duration: 1s; }
+        .star:nth-child(2) { top: 0; right: 80px; left: initial; animation-delay: 0.2s; animation-duration: 3s; }
+        .star:nth-child(3) { top: 80px; right: 0px; left: initial; animation-delay: 0.4s; animation-duration: 2s; }
+        .star:nth-child(4) { top: 0; right: 180px; left: initial; animation-delay: 0.6s; animation-duration: 1.5s; }
+        .star:nth-child(5) { top: 0; right: 400px; left: initial; animation-delay: 0.8s; animation-duration: 2.5s; }
+        .star:nth-child(6) { top: 0; right: 600px; left: initial; animation-delay: 1s; animation-duration: 3s; }
+        .star:nth-child(7) { top: 300px; right: 0px; left: initial; animation-delay: 1.2s; animation-duration: 1.75s; }
+        .star:nth-child(8) { top: 0px; right: 700px; left: initial; animation-delay: 1.4s; animation-duration: 1.25s; }
+        .star:nth-child(9) { top: 0px; right: 1000px; left: initial; animation-delay: 0.75s; animation-duration: 2.25s; }
+        .star:nth-child(10) { top: 0px; right: 450px; left: initial; animation-delay: 2.75s; animation-duration: 2.25s; }
+    </style>
+</head>
+<body class="p-4 md:p-12 min-h-screen flex items-center justify-center">
+
+<div class="shooting-stars-container">
+    <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+</div>
+
+<!-- Login Section -->
+<div id="login-container" class="glass-card p-10 rounded-[2.5rem] w-full max-w-md text-center">
+    <div class="mx-auto mb-8">
+        <img src="https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/sign/backups/chowking/chowking.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8zMmIxMDMyNi1lNzE2LTQ2YTktYjJlNi1lMmNjZGUwN2ZjNmUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYWNrdXBzL2Nob3draW5nL2Nob3draW5nLmpwZyIsImlhdCI6MTc4MDQ5NjcxMCwiZXhwIjoyNTY4ODk2NzEwfQ.9oOjED0SwmUkMpAdopHt50aF2H2tMz5KWx5Mgkt2-j8" alt="Chowking Logo" class="w-24 h-24 object-contain mx-auto">
+    </div>
+    <h2 class="text-2xl font-black tracking-tight text-white mb-2">Fusion/Chowking</h2>
+    <p class="text-space-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-8 opacity-60">Enter secure key to decrypt portal</p>
+
+    <div class="relative mb-6 text-left">
+        <label class="text-[10px] font-black text-cyan-400 uppercase tracking-widest ml-4 mb-2 block">System Password</label>
+        <div class="relative">
+            <input type="password" id="sys-pass" onkeydown="if(event.key==='Enter') checkAuth()" placeholder="••••••••" class="bg-space-950/80 border border-white/10 text-white rounded-xl px-6 py-4 pr-12 font-semibold text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full shadow-inner">
+            <button onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-space-400 hover:text-cyan-400 transition-colors">
+                <i id="toggle-icon" class="fa-solid fa-eye"></i>
+            </button>
+        </div>
+        <p id="auth-error" class="text-rose-400 text-[10px] font-bold uppercase tracking-widest mt-3 ml-4 hidden">Access Denied: Terminal Sync Failed</p>
+    </div>
+
+    <button onclick="checkAuth()" id="login-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-[0.2em] py-4 rounded-xl transition-all shadow-lg active:scale-95 shadow-cyan-500/10">Establish Uplink</button>
+</div>
+
+<!-- Personal Vault -->
+<div id="personal-vault-container" class="hidden w-full max-w-5xl mx-auto py-8">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
+        <div class="flex items-center space-x-6">
+            <div id="v-photo-container" class="w-20 h-20 bg-cyan-500/10 border-2 border-cyan-500/30 rounded-full flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(34,211,238,0.2)] shrink-0">
+                <i id="v-photo-placeholder" class="fa-solid fa-user-shield text-cyan-400 text-3xl"></i>
+                <img id="v-photo" class="w-full h-full object-cover hidden" src="" alt="" onerror="this.classList.add('hidden'); document.getElementById('v-photo-placeholder').classList.remove('hidden')">
+            </div>
+            <div>
+                <h1 id="v-name" class="text-2xl font-black tracking-tight text-white">---</h1>
+                <p id="v-id-pos" class="text-cyan-400 font-bold uppercase tracking-[0.3em] text-[9px]">ID: --- • ---</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="openDTRPortal()" class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/20 transition-all">
+                <i class="fa-solid fa-clock mr-2"></i>DTR Terminal
+            </button>
+            <button id="v-back-btn" onclick="backToDashboard()" class="hidden bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">
+                <i class="fa-solid fa-arrow-left mr-2"></i>Return to Portal
+            </button>
+            <button onclick="logout()" class="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-500/20 transition-all">
+                <i class="fa-solid fa-power-off mr-2"></i>Terminate Session
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="space-y-8">
+            <div class="glass-card p-8 rounded-[2.5rem]">
+                <h3 class="section-title"><i class="fa-solid fa-id-card"></i> Core Identity</h3>
+                <div class="space-y-6">
+                    <div><span class="info-label">Full Legal Name</span><p id="v-fullname" class="info-value">---</p></div>
+                    <div><span class="info-label">Email Address</span><p id="v-email" class="info-value text-sm">---</p></div>
+                    <div><span class="info-label">Contact Number</span><p id="v-phone" class="info-value">---</p></div>
+                    <div><span class="info-label">Marital Status</span><p id="v-marital" class="info-value uppercase">---</p></div>
+                </div>
+            </div>
+            <div class="glass-card p-8 rounded-[2.5rem]">
+                <h3 class="section-title"><i class="fa-solid fa-rocket"></i> Deployment</h3>
+                <div class="space-y-6">
+                    <div><span class="info-label">Date Hired</span><p id="v-hired" class="info-value">---</p></div>
+                    <div><span class="info-label">System Tenure</span><p id="v-tenure" class="info-value text-emerald-400 font-black">---</p></div>
+                    <div><span class="info-label">Birthday</span><p id="v-birthday" class="info-value">---</p></div>
+                    <div><span class="info-label">Residential Hub</span><p id="v-location" class="info-value text-sm">---</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-8">
+            <div class="glass-card p-8 rounded-[2.5rem]">
+                <h3 class="section-title"><i class="fa-solid fa-file-invoice"></i> System Registries</h3>
+                <div class="space-y-6 font-mono text-sm">
+                    <div><span class="info-label font-sans">SSS Number</span><p id="v-sss" class="text-slate-300">---</p></div>
+                    <div><span class="info-label font-sans">TIN Number</span><p id="v-tin" class="text-slate-300">---</p></div>
+                    <div><span class="info-label font-sans">PhilHealth ID</span><p id="v-ph" class="text-slate-300">---</p></div>
+                    <div><span class="info-label font-sans">Pag-IBIG Number</span><p id="v-pagibig" class="text-slate-300">---</p></div>
+                </div>
+            </div>
+            <div class="glass-card p-8 rounded-[2.5rem]">
+                <h3 class="section-title"><i class="fa-solid fa-vault"></i> Financial Ledger</h3>
+                <div class="space-y-6">
+                    <div><span class="info-label">Bank Institution</span><p id="v-bank" class="info-value">---</p></div>
+                    <div><span class="info-label">Account Number</span><p id="v-bank-acc" class="info-value font-mono text-cyan-400/80">---</p></div>
+                    <div><span class="info-label">Payroll Username</span><p id="v-payroll-user" class="info-value font-mono opacity-60">---</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-8">
+            <div class="glass-card p-8 rounded-[2.5rem] border-amber-500/20">
+                <h3 class="section-title"><i class="fa-solid fa-medal"></i> Recognition Medals</h3>
+                <div id="v-medal-icons" class="flex flex-wrap gap-2 mb-4"></div>
+                <div id="v-cert" class="px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest text-center">Uncertified</div>
+            </div>
+            <div class="glass-card p-8 rounded-[2.5rem]">
+                <h3 class="section-title"><i class="fa-solid fa-shirt"></i> Allocation Units</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Cap</span><p id="v-cap" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Apron</span><p id="v-apron" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt</span><p id="v-shirt" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants</span><p id="v-pants" class="info-value">0</p></div>
+                </div>
+            </div>
+            <div class="glass-card p-8 rounded-[2.5rem] border-rose-500/20">
+                <h3 class="section-title"><i class="fa-solid fa-life-ring"></i> Emergency Anchor</h3>
+                <div class="space-y-4">
+                    <div><span class="info-label">Primary Contact</span><p id="v-ec-name" class="info-value text-sm">---</p></div>
+                    <div><span class="info-label">Relationship</span><p id="v-ec-rel" class="info-value uppercase text-xs">---</p></div>
+                    <div><span class="info-label text-rose-400">Emergency Hotline</span><p id="v-ec-phone" class="info-value font-mono">---</p></div>
+                </div>
+            </div>
+            <div class="glass-card p-8 rounded-[2.5rem] border-cyan-500/20">
+                <h3 class="section-title"><i class="fa-solid fa-lock"></i> Portal Security</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="info-label">New Portal Password</label>
+                        <input type="password" id="v-new-pass" placeholder="••••••••" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-semibold text-sm outline-none focus:ring-1 focus:ring-cyan-500 w-full mb-3">
+                        <button onclick="updatePortalPassword()" id="btn-update-pass" class="w-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">Update Key</button>
+                        <p id="v-pass-msg" class="text-[8px] font-bold uppercase mt-2 hidden"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Calendar Section -->
+    <div class="mt-8 glass-card p-6 md:p-8 rounded-[2.5rem] max-w-lg mx-auto">
+        <div class="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+            <h3 class="section-title !mb-0 border-none"><i class="fa-solid fa-calendar-days"></i> Attendance</h3>
+            <div class="flex items-center gap-3">
+                <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-space-950/50 border border-white/5 flex items-center justify-center hover:bg-cyan-500/20 transition-all text-cyan-400"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                <span id="cal-month-label" class="text-[10px] font-black uppercase tracking-[0.2em] text-white min-w-[120px] text-center">---</span>
+                <button onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-space-950/50 border border-white/5 flex items-center justify-center hover:bg-cyan-500/20 transition-all text-cyan-400"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+            </div>
+        </div>
+        <div class="calendar-grid mb-2">
+            <div class="day-header">Sun</div><div class="day-header">Mon</div><div class="day-header">Tue</div><div class="day-header">Wed</div><div class="day-header">Thu</div><div class="day-header">Fri</div><div class="day-header">Sat</div>
+        </div>
+        <div id="calendar-body" class="calendar-grid"></div>
+        <div class="mt-8 flex flex-wrap gap-4 justify-center">
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-emerald-500"></div> Present</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-amber-500"></div> Late</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-orange-500"></div> Overbreak</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-fbbf24 shadow-[0_0_8px_#fbbf24]"></div> Gold Medal</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-slate-400 shadow-[0_0_8px_#94a3b8]"></div> Silver Medal</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-rose-500"></div> Absent</div>
+            <div class="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-400"><div class="w-2 h-2 rounded-full bg-cyan-500"></div> RD</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Portal Dashboard -->
+<div id="portal-container" class="hidden w-full max-w-6xl mx-auto">
+    <header class="flex flex-col lg:flex-row items-center justify-between mb-10 gap-6">
+        <div class="flex items-center space-x-5 w-full lg:w-auto">
+            <div class="shrink-0">
+                <img src="https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/sign/backups/chowking/chowking.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8zMmIxMDMyNi1lNzE2LTQ2YTktYjJlNi1lMmNjZGUwN2ZjNmUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYWNrdXBzL2Nob3draW5nL2Nob3draW5nLmpwZyIsImlhdCI6MTc4MDQ5NjcxMCwiZXhwIjoyNTY4ODk2NzEwfQ.9oOjED0SwmUkMpAdopHt50aF2H2tMz5KWx5Mgkt2-j8" alt="Chowking Logo" class="w-16 h-16 object-contain">
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">Chowking Terminal</h1>
+                <p id="sub-title" class="text-space-400 text-[9px] md:text-[11px] font-bold uppercase tracking-[0.3em] opacity-60">Employee Attendance & Records</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-center lg:justify-end gap-3 w-full lg:w-auto">
+            <button onclick="logout()" class="bg-space-950/90 border border-white/10 text-space-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:text-rose-400 transition-all shadow-inner">
+                <i class="fa-solid fa-power-off mr-2 text-[8px]"></i>Exit System
+            </button>
+            <div id="admin-controls" class="hidden flex flex-wrap gap-2 w-full sm:w-auto">
+                <div id="da-filter-container" class="hidden flex flex-wrap gap-2 w-full sm:w-auto">
+                    <select id="da-name-select" onchange="renderMain()" class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-xs md:text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all flex-1 sm:w-52 shadow-inner">
+                        <option value="">All Crew Personnel...</option>
+                    </select>
+                    <input type="text" id="da-search" oninput="renderMain()" placeholder="Search..." class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-xs md:text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all flex-1 sm:w-36 shadow-inner">
+                    <button id="btn-excrew-filter" onclick="toggleExcrew()" class="hidden bg-space-950/90 border border-white/10 text-space-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all whitespace-nowrap shadow-inner">
+                        <i class="fa-solid fa-user-slash mr-2 text-[8px]"></i>Excrew Only
+                    </button>
+                </div>
+                <input type="date" id="date-picker" onchange="fetchSummary(this.value)" class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full sm:w-auto shadow-inner">
+            </div>
+        </div>
+    </header>
+
+    <div id="stats-container" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-8 md:mb-10">
+        <div id="stat-card-present" class="bg-space-900/50 backdrop-blur-md p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-emerald-500/10 shadow-lg relative overflow-hidden group">
+            <div class="absolute -right-3 -bottom-3 text-emerald-500/5 text-4xl md:text-6xl group-hover:scale-110 transition-transform"><i class="fa-solid fa-user-check"></i></div>
+            <p id="stat-present-label" class="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Current Log</p>
+            <p id="stat-present" class="text-2xl md:text-4xl font-black text-white">0</p>
+        </div>
+        <div id="stat-card-late" class="bg-space-900/50 backdrop-blur-md p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-amber-500/10 shadow-lg relative overflow-hidden group">
+            <div class="absolute -right-3 -bottom-3 text-amber-500/5 text-4xl md:text-6xl group-hover:scale-110 transition-transform"><i class="fa-solid fa-user-clock"></i></div>
+            <p id="stat-late-label" class="text-[9px] md:text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] mb-1">Late</p>
+            <p id="stat-late" class="text-2xl md:text-4xl font-black text-white">0</p>
+        </div>
+        <div id="stat-card-absent" class="bg-space-900/50 backdrop-blur-md p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-rose-500/10 shadow-lg relative overflow-hidden group">
+            <div class="absolute -right-3 -bottom-3 text-rose-500/5 text-4xl md:text-6xl group-hover:scale-110 transition-transform"><i class="fa-solid fa-user-slash"></i></div>
+            <p id="stat-absent-label" class="text-[9px] md:text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] mb-1">Absent</p>
+            <p id="stat-absent" class="text-2xl md:text-4xl font-black text-white">0</p>
+        </div>
+        <div id="stat-card-da" class="bg-space-900/50 backdrop-blur-md p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-cyan-500/10 shadow-lg relative overflow-hidden group">
+            <div class="absolute -right-3 -bottom-3 text-cyan-500/5 text-4xl md:text-6xl group-hover:scale-110 transition-transform"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <p id="stat-da-label" class="text-[9px] md:text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-1">Active DA Cases</p>
+            <p id="stat-da-count" class="text-2xl md:text-4xl font-black text-white">0</p>
+        </div>
+    </div>
+
+    <div id="nav-controls" class="hidden grid grid-cols-2 md:flex gap-2 mb-10 bg-space-950/60 p-1.5 rounded-2xl border border-white/5 w-full shadow-2xl">
+        <button onclick="switchTab('attendance')" id="btn-attendance" class="flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all bg-cyan-500 text-space-950 shadow-md shadow-cyan-500/10 whitespace-nowrap">Attendance</button>
+        <button onclick="switchTab('employees')" id="btn-employees" class="flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap">Crew Profiles</button>
+        <button onclick="switchTab('da')" id="btn-da" class="flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap">Disciplinary Records</button>
+        <button onclick="switchTab('attrition')" id="btn-attrition" class="flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap">Attrition Logs</button>
+        <button onclick="switchTab('medals')" id="btn-medals" class="flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap">Medal Registry</button>
+        <button onclick="switchTab('system')" id="btn-system" class="hidden flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap">Master Settings</button>
+    </div>
+
+    <div id="day-note-card" class="hidden bg-space-900/70 backdrop-blur-md p-8 rounded-[2rem] border border-cyan-500/10 mb-10 flex items-start space-x-5 shadow-2xl">
+        <div class="bg-space-800 p-3 rounded-xl border border-cyan-500/20 text-cyan-400">
+            <i class="fa-solid fa-comment-dots text-xl"></i>
+        </div>
+        <div>
+            <h3 class="font-black text-[10px] text-cyan-400 uppercase tracking-[0.3em] mb-2">Command Center Broadcast Memo</h3>
+            <p id="day-note-text" class="text-[15px] font-medium text-slate-200 leading-relaxed"></p>
+        </div>
+    </div>
+
+    <div class="glass-card rounded-[2.5rem] overflow-hidden">
+        <div class="px-10 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/40">
+            <h3 class="table-header-text" id="main-breakdown-title">Data Readout</h3>
+            <div class="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]"></div>
+        </div>
+        <div id="attendance-list">
+            <div class="p-32 text-center text-space-400">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-space-700 h-12 w-12 mx-auto mb-6"></div>
+                <p class="text-xs font-bold uppercase tracking-widest opacity-50">Synchronizing Cosmic Core Feed...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="note-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden backdrop-blur-md bg-space-950/60">
+    <div class="glass-card p-8 rounded-[2rem] max-w-sm w-full animate-in zoom-in duration-200">
+        <h4 id="note-date-title" class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4">---</h4>
+        <div class="bg-space-950/50 p-4 rounded-xl border border-white/5 mb-6">
+            <p id="note-content" class="text-sm text-slate-200 leading-relaxed italic">No remarks recorded for this sequence.</p>
+        </div>
+        <button onclick="closeNote()" class="w-full py-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-black uppercase rounded-xl hover:bg-cyan-500/20 transition-all">Close Entry</button>
+    </div>
+</div>
+
+<div id="dtr-portal-modal" class="fixed inset-0 z-[105] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/70">
+    <div class="glass-card p-6 rounded-[2rem] max-w-lg w-full max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in duration-300">
+        <button onclick="closeDTRPortal()" class="absolute right-6 top-6 text-space-400 hover:text-white"><i class="fa-solid fa-circle-xmark text-xl"></i></button>
+        <div class="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+            <div><h2 class="text-xl font-black text-white tracking-tight">DTR Control</h2><p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Time Registry</p></div>
+            <div class="flex items-center gap-2">
+                <button onclick="changeDTRMonth(-1)" class="w-8 h-8 rounded-lg bg-space-950/50 border border-white/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                <span id="dtr-month-label" class="text-[10px] font-black uppercase text-white min-w-[110px] text-center">---</span>
+                <button onclick="changeDTRMonth(1)" class="w-8 h-8 rounded-lg bg-space-950/50 border border-white/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            </div>
+        </div>
+        <div class="calendar-grid mb-1"><div class="day-header text-[8px]">Sun</div><div class="day-header text-[8px]">Mon</div><div class="day-header text-[8px]">Tue</div><div class="day-header text-[8px]">Wed</div><div class="day-header text-[8px]">Thu</div><div class="day-header text-[8px]">Fri</div><div class="day-header text-[8px]">Sat</div></div>
+        <div id="dtr-calendar-body" class="calendar-grid"></div>
+        <div class="mt-6 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex gap-3">
+                <div class="flex items-center gap-1.5 text-[8px] font-bold uppercase text-slate-400"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> In</div>
+                <div class="flex items-center gap-1.5 text-[8px] font-bold uppercase text-slate-400"><div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div> Out</div>
+            </div>
+            <button onclick="openDisplayOutputModal()" class="bg-cyan-500 text-space-950 px-6 py-2.5 rounded-lg font-black text-[9px] uppercase tracking-widest shadow-lg shadow-cyan-500/10"><i class="fa-solid fa-print mr-2"></i>Export Readout</button>
+        </div>
+    </div>
+</div>
+
+<div id="dtr-entry-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 hidden backdrop-blur-md bg-space-950/60">
+    <div class="glass-card p-8 rounded-[2rem] max-w-md w-full animate-in zoom-in duration-200">
+        <h4 id="dtr-entry-title" class="text-[10px] font-black text-cyan-400 uppercase mb-6">---</h4>
+        <div class="space-y-6">
+            <div class="flex items-center justify-between bg-space-950/50 p-4 rounded-xl border border-white/5">
+                <span class="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Rest Day (RD)</span>
+                <input type="checkbox" id="dtr-is-rd" onchange="toggleRDInput(this.checked)" class="w-5 h-5 accent-cyan-500 bg-space-950 border-white/10 rounded cursor-pointer">
+            </div>
+            <div id="dtr-time-inputs" class="space-y-6">
+                <div><label class="info-label">Shift Start (Time In)</label><div class="flex gap-2">
+                    <select id="ti-hh" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1 shadow-inner"><option value="">HH</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+                    <select id="ti-mm" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1 shadow-inner"><option value="">MM</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
+                    <select id="ti-am" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 w-20 shadow-inner"><option value="AM">AM</option><option value="PM">PM</option></select>
+                </div></div>
+                <div><label class="info-label">Shift End (Time Out)</label><div class="flex gap-2">
+                    <select id="to-hh" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1 shadow-inner"><option value="">HH</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+                    <select id="to-mm" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1 shadow-inner"><option value="">MM</option><option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
+                    <select id="to-am" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-cyan-500 w-20 shadow-inner"><option value="AM">AM</option><option value="PM">PM</option></select>
+                </div></div>
+            </div>
+            <div><label class="info-label">Notes</label><textarea id="dtr-entry-note" placeholder="Shift info..." class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-3 text-sm outline-none w-full h-20 resize-none shadow-inner"></textarea></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-8">
+            <button onclick="saveDTREntry()" id="btn-save-dtr" class="py-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-black uppercase rounded-xl hover:bg-cyan-500/20 transition-all">Save Entry</button>
+            <button onclick="deleteDTREntry()" id="btn-del-dtr" class="py-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black uppercase rounded-xl hover:bg-rose-500/20 transition-all">Delete Entry</button>
+            <button onclick="closeDTREntryModal()" class="col-span-2 py-3 text-space-400 text-[9px] font-bold uppercase hover:text-white transition-all">Cancel Adjustment</button>
+        </div>
+    </div>
+</div>
+
+<div id="display-output-modal" class="fixed inset-0 z-[115] flex items-center justify-center p-4 hidden backdrop-blur-md bg-space-950/60">
+    <div class="glass-card p-8 rounded-[2rem] max-w-sm w-full animate-in zoom-in duration-200">
+        <h4 class="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-6">DTR Export Range</h4>
+        <div class="space-y-4">
+            <div><label class="info-label">Cycle Start</label><input type="date" id="output-start" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500"></div>
+            <div><label class="info-label">Cycle End</label><input type="date" id="output-end" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500"></div>
+        </div>
+        <div class="mt-8 space-y-3">
+            <button onclick="executeDTRReadout()" class="w-full py-4 bg-amber-500 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-amber-400 transition-all">Execute Readout</button>
+            <button onclick="closeDisplayOutputModal()" class="w-full py-3 text-space-400 text-[9px] font-bold uppercase hover:text-white transition-all">Abort Operation</button>
+        </div>
+    </div>
+</div>
+
+<div id="birthday-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card p-10 rounded-[3rem] max-w-md w-full text-center relative animate-in zoom-in duration-500 border-rose-500/30">
+        <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-rose-500 rounded-full flex items-center justify-center shadow-lg shadow-rose-500/20">
+            <i class="fa-solid fa-cake-candles text-white text-4xl animate-bounce"></i>
+        </div>
+        <h2 class="text-3xl font-black text-white mt-8 mb-2 tracking-tight">🎉 Happy Birthday! 🎂</h2>
+        <div id="bday-names-container" class="mb-6 flex flex-col items-center"></div>
+        <div class="bg-space-950/50 p-6 rounded-2xl border border-white/5 mb-8">
+            <p id="bday-message" class="text-sm text-slate-200 leading-relaxed font-medium italic"></p>
+        </div>
+        <button onclick="dismissBirthday()" class="w-full py-4 bg-rose-500 hover:bg-rose-400 text-white font-black uppercase text-xs tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-rose-500/10">Hooray! 🎊</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://uhmjgnwpzsemksxcjpiz.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWpnbndwenNlbWtzeGNqcGl6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODMyNDU2NCwiZXhwIjoyMDkzOTAwNTY0fQ.SVdNjQlocvBEwwxl2K_7BMT94vUq5fkNRev65fXrvyc';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function getProfilePic(empNo) {
+        if (!empNo) return `https://ui-avatars.com/api/?name=User&background=0b0f19&color=22d3ee`;
+        const safeEmpNo = empNo.trim().replace(/\//g, "_").replace(/#/g, "_").replace(/ /g, "_");
+        const { data } = sb.storage.from('backups').getPublicUrl(`${safeEmpNo}/${safeEmpNo}.jpg`);
+        return data.publicUrl;
+    }
+
+    let AUTH_PASS = null, MEDAL_PASS = null, SUPER_PASS = null;
+    let employees = [], activeTab = 'attendance', portalRole = 'admin';
+    let currentAttendance = [], allAttendance = [], allDaRecords = [], allAttritionRecords = [], dtrRecords = [];
+    let currentNote = null, showExcrew = false, medalCountdownStart = null;
+    let currentCalDate = new Date(), dtrCalDate = new Date(), currentVaultEmp = null, selectedDTRDate = null;
+
+    function to12h(t) { if(!t) return '--:--'; const p = t.split(':'); let h = parseInt(p[0]); const m = p[1], am = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h.toString().padStart(2,'0')}:${m} ${am}`; }
+    function to24h(h, m, am) { if(!h || !m) return null; let hh = parseInt(h); if(am==='PM' && hh<12) hh += 12; if(am==='AM' && hh===12) hh = 0; return `${hh.toString().padStart(2,'0')}:${m}`; }
+
+    function toggleRDInput(checked) {
+        const container = document.getElementById('dtr-time-inputs');
+        container.style.opacity = checked ? '0.3' : '1';
+        container.querySelectorAll('select').forEach(s => s.disabled = checked);
+        if(checked) {
+            ['ti-hh','ti-mm','to-hh','to-mm'].forEach(id => document.getElementById(id).value = '');
+        }
+    }
+
+    function changeMonth(dir) { currentCalDate.setMonth(currentCalDate.getMonth() + dir); renderCalendar(); }
+    function closeNote() { document.getElementById('note-modal').classList.add('hidden'); }
+    function showDayNote(dateStr, status, note) {
+        document.getElementById('note-date-title').innerText = `${new Date(dateStr).toDateString()} • ${status}`;
+        document.getElementById('note-content').innerText = note && note.trim() ? `"${note}"` : "No remarks recorded for this sequence.";
+        document.getElementById('note-modal').classList.remove('hidden');
+    }
+
+    function toggleExcrew() {
+        showExcrew = !showExcrew;
+        const btn = document.getElementById('btn-excrew-filter');
+        if (showExcrew) {
+            btn.classList.remove('text-space-400');
+            btn.classList.add('bg-rose-500/20', 'text-rose-400', 'border-rose-500/30');
+        } else {
+            btn.classList.add('text-space-400');
+            btn.classList.remove('bg-rose-500/20', 'text-rose-400', 'border-rose-500/30');
+        }
+        renderMain();
+    }
+
+    function getBirthdayGreeting() {
+        const messages = [
+            "On behalf of the entire Chowking team, we wish you a day filled with joy, laughter, and wonderful surprises! May this special year be as amazing as you are. Keep shining and continue to inspire everyone around you!",
+            "Wishing you the happiest of birthdays! Thank you for bringing your amazing energy and dedication to our Chowking family every single day. May all your dreams and aspirations turn into reality!",
+            "Happy Birthday! Your hard work, passion, and positive attitude make a huge difference in our team. Enjoy your special day to the fullest, and may the year ahead be filled with endless opportunities and success!",
+            "Warmest birthday wishes to an incredible member of our team! May your day be blessed with love, happiness, and sweet moments. We are so proud and grateful to have you with us!",
+            "Cheers to another wonderful year! May this birthday bring you abundant joy, good health, and fantastic memories. Thank you for being such an awesome colleague. Have a blast today!",
+            "Happy Birthday! We hope your day is as bright, cheerful, and wonderful as your presence is to all of us. Wishing you a fantastic celebration and a blessed year ahead!",
+            "Best birthday wishes! You are a truly valued member of the Chowking family. May your day be filled with cake, laughter, and the company of loved ones!",
+            "It's your special day! We hope you get to relax and enjoy every moment. You deserve all the best for everything you do for the team. Happy Birthday!",
+            "Sending you tons of good vibes on your birthday! May this new chapter of your life be filled with even more growth and happiness. Enjoy your day!",
+            "To our amazing birthday celebrant: Thank you for being you! Your unique personality makes our workplace so much better. Have the best birthday ever!"
+        ];
+        return messages[Math.floor(Math.random() * messages.length)];
+    }
+
+    function checkBirthdayAlerts(data) {
+        const today = new Date(), tM = today.getMonth(), tD = today.getDate();
+        const bdays = (data || []).filter(e => {
+            if (!e.birthday || e.position === 'Excrew') return false;
+            const d = new Date(e.birthday);
+            return d.getMonth() === tM && d.getDate() === tD;
+        });
+
+        if (bdays.length > 0) {
+            const todayStr = today.toISOString().split('T')[0];
+            const storageKey = portalRole === 'personal' ? `bday_dismissed_${sessionStorage.getItem('portal_id')}` : 'bday_dismissed_admin';
+            if (localStorage.getItem(storageKey) !== todayStr) {
+                const container = document.getElementById('bday-names-container');
+                container.innerHTML = bdays.map(e => `<h3 class="text-xl font-bold text-cyan-400 tracking-tight">${e.first_name} ${e.last_name}</h3>`).join('');
+                document.getElementById('bday-message').innerText = getBirthdayGreeting();
+                document.getElementById('birthday-modal').classList.remove('hidden');
+            }
+        }
+    }
+
+    function dismissBirthday() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const storageKey = portalRole === 'personal' ? `bday_dismissed_${sessionStorage.getItem('portal_id')}` : 'bday_dismissed_admin';
+        localStorage.setItem(storageKey, todayStr);
+        document.getElementById('birthday-modal').classList.add('hidden');
+    }
+
+    function selectDAEmployee(name) { document.getElementById('da-name-select').value = name; renderMain(); }
+
+    function togglePassword() {
+        const passInput = document.getElementById('sys-pass'), icon = document.getElementById('toggle-icon');
+        if (passInput.type === 'password') { passInput.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+        else { passInput.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    }
+
+    async function checkAuth() {
+        const pass = document.getElementById('sys-pass').value.trim(), error = document.getElementById('auth-error'), btn = document.getElementById('login-btn');
+        btn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full mx-auto"></div>'; btn.disabled = true;
+        try {
+            if (!AUTH_PASS || !MEDAL_PASS || !SUPER_PASS) {
+                const { data: settings } = await sb.from('settings').select('key, value').in('key', ['admin_portal_pass', 'medal_portal_pass', 'superadmin_portal_pass']);
+                if (settings) {
+                    AUTH_PASS = settings.find(s => s.key === 'admin_portal_pass')?.value || 'fusion2026';
+                    MEDAL_PASS = settings.find(s => s.key === 'medal_portal_pass')?.value || 'medal2026';
+                    SUPER_PASS = settings.find(s => s.key === 'superadmin_portal_pass')?.value || 'nocturnal';
+                }
+            }
+            if (pass === AUTH_PASS || pass === MEDAL_PASS || pass === SUPER_PASS) {
+                let role = pass === AUTH_PASS ? 'admin' : (pass === MEDAL_PASS ? 'medal' : 'superadmin');
+                sessionStorage.setItem('portal_auth', 'true'); sessionStorage.setItem('portal_role', role); portalRole = role;
+                document.getElementById('login-container').classList.add('hidden'); document.getElementById('portal-container').classList.remove('hidden');
+                document.body.classList.remove('items-center', 'justify-center'); document.body.classList.add('p-4', 'md:p-12');
+                if (role === 'medal') activeTab = 'medals';
+                initializeData(); return;
+            }
+            let { data: emp } = await sb.from('employees').select('*').or(`employee_no.eq.${pass},portal_password.eq.${pass}`).maybeSingle();
+            if (emp) {
+                sessionStorage.setItem('portal_auth', 'true'); sessionStorage.setItem('portal_role', 'personal'); sessionStorage.setItem('portal_id', emp.employee_no); portalRole = 'personal';
+                showVault(emp);
+            } else {
+                error.innerText = "Access Denied: Identity Not Found"; error.classList.remove('hidden'); btn.innerText = 'Establish Uplink'; btn.disabled = false;
+            }
+        } catch (err) { error.innerText = "Sync Error: " + err.message; error.classList.remove('hidden'); btn.innerText = 'Establish Uplink'; btn.disabled = false; }
+    }
+
+    async function updatePortalPassword() {
+        const newPass = document.getElementById('v-new-pass').value.trim(), msg = document.getElementById('v-pass-msg'), btn = document.getElementById('btn-update-pass'), empNo = sessionStorage.getItem('portal_id');
+        if (!newPass) return;
+        if (newPass.length < 4) { msg.innerText = "Security Alert: Key Too Short (Min 4)"; msg.className = "text-[8px] font-black uppercase mt-2 text-rose-400"; msg.classList.remove('hidden'); return; }
+        btn.innerText = "Encrypting..."; btn.disabled = true;
+        try {
+            const { error } = await sb.from('employees').update({ portal_password: newPass }).eq('employee_no', empNo);
+            if (error) throw error;
+            msg.innerText = "Encryption Success: New Key Active"; msg.className = "text-[8px] font-black uppercase mt-2 text-emerald-400"; msg.classList.remove('hidden');
+            document.getElementById('v-new-pass').value = '';
+        } catch (err) { msg.innerText = "Encryption Failed: " + err.message; msg.className = "text-[8px] font-black uppercase mt-2 text-rose-400"; msg.classList.remove('hidden'); }
+        finally { btn.innerText = "Update Key"; btn.disabled = false; }
+    }
+
+    function openPersonalProfile(empNo) {
+        const emp = employees.find(e => e.employee_no === empNo);
+        if (emp) { document.getElementById('portal-container').classList.add('hidden'); showVault(emp); }
+    }
+
+    function backToDashboard() { document.getElementById('personal-vault-container').classList.add('hidden'); document.getElementById('portal-container').classList.remove('hidden'); }
+
+    async function adminUpdatePass(empNo) {
+        const input = document.getElementById(`pass-${empNo}`), newPass = input.value.trim(), btn = event.target;
+        if (!newPass) return;
+        btn.innerText = "..."; btn.disabled = true;
+        try {
+            const { error } = await sb.from('employees').update({ portal_password: newPass }).eq('employee_no', empNo);
+            if (error) throw error;
+            btn.innerText = "OK"; btn.classList.replace('text-cyan-400', 'text-emerald-400');
+            setTimeout(() => { btn.innerText = "Set"; btn.classList.replace('text-emerald-400', 'text-cyan-400'); btn.disabled = false; }, 2000);
+        } catch (err) { btn.innerText = "ERR"; btn.classList.replace('text-cyan-400', 'text-rose-400'); setTimeout(() => { btn.innerText = "Set"; btn.classList.replace('text-rose-400', 'text-cyan-400'); btn.disabled = false; }, 2000); }
+    }
+
+    function logout() { sessionStorage.removeItem('portal_auth'); sessionStorage.removeItem('portal_role'); sessionStorage.removeItem('portal_id'); location.reload(); }
+
+    window.onload = async () => {
+        if (sessionStorage.getItem('portal_auth') === 'true') {
+            portalRole = sessionStorage.getItem('portal_role') || 'admin';
+            const portalId = sessionStorage.getItem('portal_id');
+            if (portalRole === 'personal' && portalId) {
+                const { data: emp } = await sb.from('employees').select('*').eq('employee_no', portalId).maybeSingle();
+                if (emp) showVault(emp); else logout();
+            } else {
+                document.getElementById('login-container').classList.add('hidden'); document.getElementById('portal-container').classList.remove('hidden');
+                document.body.classList.remove('items-center', 'justify-center');
+                if (portalRole === 'medal') activeTab = 'medals';
+                initializeData();
+            }
+        }
+    };
+
+    async function showVault(emp) {
+        currentVaultEmp = emp;
+        document.getElementById('login-container').classList.add('hidden');
+        document.getElementById('personal-vault-container').classList.remove('hidden');
+        document.body.classList.remove('items-center', 'justify-center');
+        document.body.classList.add('p-4', 'md:p-12');
+
+        currentCalDate = new Date(); dtrCalDate = new Date();
+        renderCalendar();
+
+        const backBtn = document.getElementById('v-back-btn');
+        if (portalRole === 'admin' || portalRole === 'superadmin') backBtn.classList.remove('hidden'); else backBtn.classList.add('hidden');
+
+        const photoImg = document.getElementById('v-photo'), photoPlaceholder = document.getElementById('v-photo-placeholder');
+        photoImg.src = getProfilePic(emp.employee_no);
+        photoImg.onload = () => { photoImg.classList.remove('hidden'); photoPlaceholder.classList.add('hidden'); };
+        photoImg.onerror = () => { photoImg.classList.add('hidden'); photoPlaceholder.classList.remove('hidden'); };
+
+        document.getElementById('v-name').innerText = `${emp.first_name} ${emp.last_name}`;
+        document.getElementById('v-id-pos').innerText = `ID: ${emp.employee_no} • ${emp.position}`;
+        document.getElementById('v-fullname').innerText = `${emp.first_name} ${emp.middle_name ? emp.middle_name + ' ' : ''}${emp.last_name}`;
+        document.getElementById('v-email').innerText = emp.email || 'N/A';
+        document.getElementById('v-phone').innerText = emp.phone_number || 'N/A';
+        document.getElementById('v-marital').innerText = emp.marital_status || '---';
+        document.getElementById('v-hired').innerText = emp.date_hired || '---';
+        document.getElementById('v-birthday').innerText = emp.birthday || '---';
+        document.getElementById('v-location').innerText = emp.location || '---';
+
+        if (emp.date_hired) {
+            const hired = new Date(emp.date_hired), diff = new Date() - hired;
+            const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365)), months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+            document.getElementById('v-tenure').innerText = `${years}y ${months}m`;
+        }
+
+        document.getElementById('v-sss').innerText = emp.sss || '---';
+        document.getElementById('v-tin').innerText = emp.tin_number || '---';
+        document.getElementById('v-ph').innerText = emp.phil_health || '---';
+        document.getElementById('v-pagibig').innerText = emp.pagibig || '---';
+        document.getElementById('v-bank').innerText = emp.bank || '---';
+        document.getElementById('v-bank-acc').innerText = emp.bank_account_number || '---';
+        document.getElementById('v-payroll-user').innerText = emp.payroll_username || '---';
+        document.getElementById('v-cap').innerText = emp.uniform_cap || 0;
+        document.getElementById('v-apron').innerText = emp.uniform_apron || 0;
+        document.getElementById('v-shirt').innerText = emp.uniform_shirt || 0;
+        document.getElementById('v-pants').innerText = emp.uniform_pants || 0;
+
+        const certEl = document.getElementById('v-cert');
+        if (emp.is_certified) { certEl.innerText = "Crew Certified"; certEl.className = "px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest text-center"; }
+        else { certEl.innerText = "Uncertified"; certEl.className = "px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest text-center"; }
+
+        document.getElementById('v-ec-name').innerText = emp.emergency_contact_name || '---';
+        document.getElementById('v-ec-rel').innerText = emp.emergency_contact_relationship || '---';
+        document.getElementById('v-ec-phone').innerText = emp.emergency_contact_phone || '---';
+
+        const { data: settings } = await sb.from('settings').select('value').eq('key', 'medal_countdown_start').maybeSingle();
+        const startStr = settings ? settings.value : null, startDate = startStr ? new Date(startStr) : new Date();
+        if (!startStr) startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0,0,0,0);
+        const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
+
+        const { data: att } = await sb.from('attendance_records').select('*').eq('employee_id', emp.employee_no);
+        let gold = 0, silver = 0;
+        (att || []).forEach(r => {
+            const d = new Date(r.date);
+            if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
+                const match = (r.note || "").match(/\((\d+)\s*mins\)/);
+                if (match && parseInt(match[1]) >= 5) gold++; else silver++;
+            }
+        });
+
+        let icons = '';
+        for(let i=0; i<gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-xl shadow-[0_0_10px_rgba(251,191,36,0.5)]"></i>';
+        for(let i=0; i<silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-xl shadow-[0_0_10px_rgba(148,163,184,0.5)]"></i>';
+        document.getElementById('v-medal-icons').innerHTML = icons || '<p class="text-[10px] text-space-400 italic">No medals in current cycle.</p>';
+
+        const { data: dtr } = await sb.from('daily_time_records').select('*').eq('employee_id', emp.employee_no);
+        dtrRecords = dtr || [];
+
+        checkBirthdayAlerts([emp]);
+    }
+
+    async function renderCalendar() {
+        const body = document.getElementById('calendar-body'), monthLabel = document.getElementById('cal-month-label');
+        if (!currentVaultEmp) return;
+        const year = currentCalDate.getFullYear(), month = currentCalDate.getMonth();
+        monthLabel.innerText = currentCalDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`, endStr = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+        const { data: monthRecords } = await sb.from('attendance_records').select('*').eq('employee_id', currentVaultEmp.employee_no).gte('date', startStr).lte('date', endStr);
+        let html = ''; const firstDay = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDay; i++) html += '<div class="cal-empty"></div>';
+        const todayStr = new Date().toISOString().split('T')[0];
+        for (let d = 1; d <= new Date(year, month + 1, 0).getDate(); d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, rec = (monthRecords || []).find(r => r.date === dateStr);
+            let statusClass = '', medalIcon = '';
+            if (rec) {
+                const match = (rec.note || "").match(/\((\d+)\s*mins\)/);
+                const isLateOrOverbreak = rec.status === 'LATE' || rec.status === 'OVERBREAK';
+                const mins = match ? parseInt(match[1]) : 0;
+
+                if (isLateOrOverbreak && mins >= 5) {
+                    statusClass = 'cal-gold';
+                    medalIcon = '<i class="fa-solid fa-medal text-amber-400 text-[8px] absolute top-1 right-1 opacity-80"></i>';
+                }
+                else if (isLateOrOverbreak) {
+                    statusClass = 'cal-silver';
+                    medalIcon = '<i class="fa-solid fa-medal text-slate-400 text-[8px] absolute top-1 right-1 opacity-80"></i>';
+                }
+                else if (rec.status === 'ABSENT' || rec.status === 'IR') statusClass = 'cal-absent';
+                else if (rec.status === 'RD') statusClass = 'cal-rd';
+                else statusClass = 'cal-present';
+            }
+            html += `<div onclick="showDayNote('${dateStr}', '${rec?.status || 'NO RECORD'}', '${(rec?.note || "").replace(/'/g, "\\'")}')" class="calendar-day ${statusClass} ${dateStr === todayStr ? 'cal-today' : ''}">${medalIcon}<span>${d}</span></div>`;
+        }
+        body.innerHTML = html;
+    }
+
+    function openDTRPortal() { renderDTRCalendar(); document.getElementById('dtr-portal-modal').classList.remove('hidden'); }
+    function closeDTRPortal() { document.getElementById('dtr-portal-modal').classList.add('hidden'); }
+    function changeDTRMonth(d) { dtrCalDate.setMonth(dtrCalDate.getMonth() + d); renderDTRCalendar(); }
+
+    function renderDTRCalendar() {
+        const body = document.getElementById('dtr-calendar-body'); if(!body) return;
+        const year = dtrCalDate.getFullYear(), month = dtrCalDate.getMonth();
+        document.getElementById('dtr-month-label').innerText = dtrCalDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        let html = ''; const first = new Date(year, month, 1).getDay();
+        for(let i=0; i<first; i++) html += '<div class="cal-empty"></div>';
+        for(let d=1; d<=new Date(year,month+1,0).getDate(); d++) {
+            const date = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const r = dtrRecords.find(x => x.date === date);
+            let dtrH = '';
+            if(r) {
+                const isRD = r.note && r.note.startsWith('[RD]');
+                if(isRD) dtrH = '<div class="mt-1 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[7px] font-black rounded uppercase">Rest Day</div>';
+                else dtrH = `<div class="cal-time text-emerald-400">${to12h(r.time_in)}</div><div class="cal-time text-rose-400">${to12h(r.time_out)}</div>`;
+            }
+            html += `<div onclick="openDTREntryModal('${date}')" class="calendar-day"><span>${d}</span>${dtrH}</div>`;
+        }
+        body.innerHTML = html;
+    }
+
+    function openDTREntryModal(date) {
+        selectedDTRDate = date; const r = dtrRecords.find(x => x.date === date);
+        document.getElementById('dtr-entry-title').innerText = `${new Date(date).toDateString()} Entry`;
+
+        const rdCheck = document.getElementById('dtr-is-rd');
+        const isRD = r?.note && r.note.startsWith('[RD]');
+        rdCheck.checked = !!isRD;
+        toggleRDInput(rdCheck.checked);
+
+        const set = (p, t) => {
+            const h = document.getElementById(p+'-hh'), m = document.getElementById(p+'-mm'), a = document.getElementById(p+'-am');
+            if(!t) { h.value=''; m.value=''; a.value='AM'; return; }
+            const parts = t.split(':'); let hh = parseInt(parts[0]);
+            h.value = (hh % 12 || 12).toString().padStart(2,'0'); m.value = parts[1]; a.value = hh >= 12 ? 'PM' : 'AM';
+        };
+        set('ti', r?.time_in); set('to', r?.time_out);
+        document.getElementById('dtr-entry-note').value = isRD ? r.note.replace('[RD] ', '') : (r?.note || '');
+        document.getElementById('dtr-entry-modal').classList.remove('hidden');
+    }
+    function closeDTREntryModal() { document.getElementById('dtr-entry-modal').classList.add('hidden'); }
+
+    async function saveDTREntry() {
+        const isRD = document.getElementById('dtr-is-rd').checked;
+        const ti = isRD ? null : to24h(document.getElementById('ti-hh').value, document.getElementById('ti-mm').value, document.getElementById('ti-am').value);
+        const to = isRD ? null : to24h(document.getElementById('to-hh').value, document.getElementById('to-mm').value, document.getElementById('to-am').value);
+        const userNote = document.getElementById('dtr-entry-note').value;
+        const finalNote = isRD ? `[RD] ${userNote}` : userNote;
+
+        if (!isRD && ti && to && ti >= to) {
+            alert('Temporal Paradox Detected: Shift End cannot precede or equal Shift Start.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-save-dtr'); btn.disabled = true; btn.innerText = 'Syncing...';
+        try {
+            const { error } = await sb.from('daily_time_records').upsert({
+                employee_id: currentVaultEmp.employee_no,
+                date: selectedDTRDate,
+                time_in: ti,
+                time_out: to,
+                note: finalNote
+            }, { onConflict: 'employee_id,date' });
+            if(error) throw error;
+            const { data } = await sb.from('daily_time_records').select('*').eq('employee_id', currentVaultEmp.employee_no);
+            dtrRecords = data || []; renderDTRCalendar(); closeDTREntryModal();
+        } catch (e) { alert(e.message); } finally { btn.disabled = false; btn.innerText = 'Save Entry'; }
+    }
+
+    async function deleteDTREntry() {
+        if(!confirm('Purge this record?')) return;
+        try {
+            await sb.from('daily_time_records').delete().eq('employee_id', currentVaultEmp.employee_no).eq('date', selectedDTRDate);
+            dtrRecords = dtrRecords.filter(x => x.date !== selectedDTRDate); renderDTRCalendar(); closeDTREntryModal();
+        } catch (e) { alert(e.message); }
+    }
+
+    function openDisplayOutputModal() { document.getElementById('display-output-modal').classList.remove('hidden'); }
+    function closeDisplayOutputModal() { document.getElementById('display-output-modal').classList.add('hidden'); }
+
+    function executeDTRReadout() {
+        const s = document.getElementById('output-start').value, e = document.getElementById('output-end').value;
+        if(!s || !e) return alert('Select range');
+        const filtered = dtrRecords.filter(r => r.date >= s && r.date <= e).sort((a,b) => a.date.localeCompare(b.date));
+        let h = `<html><head><title>DTR Readout</title><style>body{font-family:sans-serif;padding:40px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #eee;padding:12px;text-align:left}th{background:#f8f9fa}</style></head><body>`;
+        h += `<h1>DTR Summary</h1><h3>Personnel: ${currentVaultEmp.first_name} ${currentVaultEmp.last_name}</h3><p>Cycle: ${s} to ${e}</p><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Note</th></tr></thead><tbody>`;
+        filtered.forEach(r => { h += `<tr><td>${r.date}</td><td>${to12h(r.time_in)}</td><td>${to12h(r.time_out)}</td><td>${r.note || '--'}</td></tr>`; });
+        h += `</tbody></table><script>window.print();<\/script></body></html>`;
+        const win = window.open('', '_blank'); win.document.write(h); win.document.close();
+    }
+
+    async function initializeData() {
+        const today = new Date().toISOString().split('T')[0]; document.getElementById('date-picker').value = today;
+        const { data } = await sb.from('employees').select('*'); if (data) employees = data;
+        const { data: attendanceData } = await sb.from('attendance_records').select('*'); if (attendanceData) allAttendance = attendanceData;
+        const { data: daData } = await sb.from('da_records').select('*').order('date_report', { ascending: false });
+        if (daData) {
+            allDaRecords = daData; const select = document.getElementById('da-name-select'); select.innerHTML = '<option value="">All Crew Personnel...</option>';
+            [...new Set(daData.map(r => r.employee_name))].sort().forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.innerText = name; select.appendChild(opt); });
+        }
+        const { data: attrData } = await sb.from('attrition_records').select('*').order('last_day_of_duty', { ascending: false }); if (attrData) allAttritionRecords = attrData;
+        const { data: settingsData } = await sb.from('settings').select('value').eq('key', 'medal_countdown_start').maybeSingle(); if (settingsData) medalCountdownStart = settingsData.value;
+
+        if (portalRole !== 'personal') checkBirthdayAlerts(employees);
+
+        fetchSummary(today);
+    }
+
+    function switchTab(tab) {
+        if (portalRole === 'medal' && tab !== 'medals') return;
+        if (portalRole === 'personal') return;
+        activeTab = tab;
+        const btnAtt = document.getElementById('btn-attendance'), btnEmp = document.getElementById('btn-employees'), btnDa = document.getElementById('btn-da'), btnAttr = document.getElementById('btn-attrition'), btnMedal = document.getElementById('btn-medals'), btnSystem = document.getElementById('btn-system');
+        const datePicker = document.getElementById('date-picker'), daFilter = document.getElementById('da-filter-container'), excrewBtn = document.getElementById('btn-excrew-filter');
+        [btnAtt, btnEmp, btnDa, btnAttr, btnMedal, btnSystem].forEach(btn => { if (!btn) return; btn.className = "flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white whitespace-nowrap"; });
+        const activeBtn = document.getElementById('btn-' + tab); if (activeBtn) activeBtn.className = "flex-1 px-6 md:px-8 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all bg-cyan-500 text-space-950 shadow-md shadow-cyan-500/10 whitespace-nowrap";
+        if (tab === 'attendance') { datePicker.classList.remove('hidden'); daFilter.classList.add('hidden'); }
+        else if (tab === 'medals') { datePicker.classList.add('hidden'); daFilter.classList.add('hidden'); }
+        else { datePicker.classList.add('hidden'); daFilter.classList.remove('hidden'); }
+        if (tab === 'employees') excrewBtn.classList.remove('hidden');
+        else { excrewBtn.classList.add('hidden'); showExcrew = false; excrewBtn.classList.add('text-space-400'); excrewBtn.classList.remove('bg-rose-500/20', 'text-rose-400', 'border-rose-500/30'); }
+        renderMain();
+    }
+
+    async function fetchSummary(date) {
+        const listContainer = document.getElementById('attendance-list');
+        listContainer.innerHTML = '<div class="p-32 text-center"><div class="loader ease-linear rounded-full border-4 border-t-4 border-space-800 h-12 w-12 mx-auto mb-6"></div></div>';
+        try {
+            const { data: records, error: recError } = await sb.from('attendance_records').select('*').eq('date', date);
+            const { data: noteData } = await sb.from('daily_summary_notes').select('note').eq('date', date).maybeSingle();
+            if (recError) throw recError;
+            currentAttendance = records || []; currentNote = noteData ? noteData.note : null; renderMain();
+        } catch (err) { listContainer.innerHTML = `<div class="p-32 text-center text-rose-400 font-bold uppercase text-xs tracking-widest">Uplink Interrupted.<br><span class="text-[10px] lowercase italic opacity-60">${err.message || err}</span></div>`; }
+    }
+
+    function renderMain() {
+        const statLabels = { present: document.getElementById('stat-present-label'), late: document.getElementById('stat-late-label'), absent: document.getElementById('stat-absent-label'), da: document.getElementById('stat-da-label') };
+        const statVals = { present: document.getElementById('stat-present'), late: document.getElementById('stat-late'), absent: document.getElementById('stat-absent'), da: document.getElementById('stat-da-count') };
+        const statCards = { present: document.getElementById('stat-card-present'), late: document.getElementById('stat-card-late'), absent: document.getElementById('stat-card-absent'), da: document.getElementById('stat-card-da') };
+
+        if (portalRole === 'medal') {
+            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden'));
+            document.getElementById('stats-container').classList.add('hidden'); document.getElementById('nav-controls').classList.add('hidden'); document.getElementById('admin-controls').classList.add('hidden');
+        } else {
+            document.getElementById('stats-container').classList.remove('hidden'); document.getElementById('nav-controls').classList.remove('hidden'); document.getElementById('admin-controls').classList.remove('hidden');
+            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.remove('hidden'));
+            const sysBtn = document.getElementById('btn-system'); if (portalRole === 'superadmin') sysBtn.classList.remove('hidden'); else sysBtn.classList.add('hidden');
+        }
+
+        const daSearch = document.getElementById('da-search').value.toLowerCase(), daSelectedName = document.getElementById('da-name-select').value;
+        let filteredDa = allDaRecords;
+        if (daSelectedName) filteredDa = filteredDa.filter(r => r.employee_name === daSelectedName);
+        if (daSearch) filteredDa = filteredDa.filter(r => r.employee_name.toLowerCase().includes(daSearch));
+        let filteredAttr = allAttritionRecords;
+        if (daSelectedName) filteredAttr = filteredAttr.filter(r => `${r.first_name} ${r.last_name}` === daSelectedName || r.employee_no === daSelectedName);
+        if (daSearch) filteredAttr = filteredAttr.filter(r => r.first_name.toLowerCase().includes(daSearch) || r.last_name.toLowerCase().includes(daSearch) || r.employee_no.toLowerCase().includes(daSearch));
+        let filteredEmps;
+        if (showExcrew) filteredEmps = employees.filter(e => e.position === 'Excrew' && !(`${e.first_name} ${e.last_name}`.includes('Marcyl Maquiling')));
+        else filteredEmps = employees.filter(e => !["Manager", "Senior Crew", "Excrew", "Assistant Manager", "Coordinator", "Administrator"].includes(e.position));
+        if (daSelectedName) filteredEmps = filteredEmps.filter(e => `${e.first_name} ${e.last_name}` === daSelectedName || e.employee_no === daSelectedName);
+        if (daSearch) filteredEmps = filteredEmps.filter(e => e.first_name.toLowerCase().includes(daSearch) || e.last_name.toLowerCase().includes(daSearch) || e.employee_no.toLowerCase().includes(daSearch));
+
+        if (activeTab === 'attendance') {
+            statCards.da.classList.add('hidden');
+            const stats = { present: 0, late: 0, absent: 0 };
+            currentAttendance.forEach(r => { if (r.status === 'LATE') stats.late++; else if (r.status === 'ABSENT') stats.absent++; });
+            stats.present = currentAttendance.filter(r => r.status !== 'ABSENT' && r.status !== 'RD').length;
+            statLabels.present.innerText = "Current Log"; statVals.present.innerText = stats.present; statLabels.late.innerText = "Late"; statVals.late.innerText = stats.late; statLabels.absent.innerText = "Absent"; statVals.absent.innerText = stats.absent;
+        } else if (activeTab === 'employees') {
+            const certifiedCount = filteredEmps.filter(e => e.is_certified).length;
+            statLabels.present.innerText = "Total Personnel"; statVals.present.innerText = filteredEmps.length; statLabels.late.innerText = "Certified"; statVals.late.innerText = certifiedCount; statLabels.absent.innerText = "Uncertified"; statVals.absent.innerText = filteredEmps.length - certifiedCount;
+            statLabels.da.innerText = showExcrew ? "Excrew Records" : "Active Crew Member"; statVals.da.innerText = filteredEmps.length;
+        } else if (activeTab === 'da') {
+            [statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden')); statLabels.present.innerText = "Total Cases"; statVals.present.innerText = filteredDa.length;
+        } else if (activeTab === 'system') { [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden')); }
+        else if (activeTab === 'attrition') { [statCards.present, statCards.late, statCards.absent].forEach(c => c.classList.add('hidden')); statLabels.da.innerText = "Historical Log"; statVals.da.innerText = allAttritionRecords.length; }
+
+        const positionOrder = ["team leader", "cashier", "dispatch", "ss", "cic", "assembler", "fryer", "noodle", "dj", "backup"];
+        filteredEmps.sort((a, b) => {
+            const posA = (a.position || "").toLowerCase(), posB = (b.position || "").toLowerCase();
+            const indexA = positionOrder.indexOf(posA), indexB = positionOrder.indexOf(posB);
+            if (indexA === -1 && indexB === -1) return posA.localeCompare(posB);
+            if (indexA === -1) return 1; if (indexB === -1) return -1; return indexA - indexB;
+        });
+
+        const noteCard = document.getElementById('day-note-card');
+        if (currentNote && activeTab === 'attendance') { noteCard.classList.remove('hidden'); document.getElementById('day-note-text').innerText = currentNote; } else noteCard.classList.add('hidden');
+
+        const listContainer = document.getElementById('attendance-list'), titleEl = document.getElementById('main-breakdown-title');
+        if (activeTab === 'attendance') { titleEl.innerText = "Attendance"; renderAttendance(listContainer); }
+        else if (activeTab === 'employees') { titleEl.innerText = showExcrew ? "Excrew Personnel Archive" : "Active Crew"; renderCrewProfiles(listContainer, filteredEmps); }
+        else if (activeTab === 'da') { titleEl.innerText = "Incident Case Archive"; renderDA(listContainer, filteredDa); }
+        else if (activeTab === 'medals') { titleEl.innerText = "Personnel Medal Registry"; renderMedals(listContainer); }
+        else if (activeTab === 'system') { titleEl.innerText = "Master System Control"; renderSystemSettings(listContainer); }
+        else { titleEl.innerText = "Historical Attrition Log"; renderAttrition(listContainer, filteredAttr); }
+    }
+
+    async function updateMasterKey(key, inputId) {
+        const val = document.getElementById(inputId).value.trim(), btn = event.target; if (!val) return;
+        btn.innerText = "Updating...";
+        try {
+            const { error } = await sb.from('settings').upsert({ key: key, value: val }, { onConflict: 'key' });
+            if (error) throw error;
+            btn.innerText = "Success"; btn.className = "bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest";
+            if (key === 'admin_portal_pass') AUTH_PASS = val; if (key === 'medal_portal_pass') MEDAL_PASS = val; if (key === 'superadmin_portal_pass') SUPER_PASS = val;
+        } catch (e) { btn.innerText = "Error"; }
+        finally { setTimeout(() => { btn.innerText = "Update Key"; btn.className = "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all"; }, 2000); }
+    }
+
+    function renderSystemSettings(container) {
+        container.innerHTML = `
+            <div class="p-10 md:p-16 grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="glass-card p-8 rounded-[2rem] border-cyan-500/10">
+                    <h4 class="text-xs font-black text-white uppercase tracking-widest mb-6">Portal Access Keys</h4>
+                    <div class="space-y-6">
+                        <div><label class="info-label">Main Admin Key (Fusion)</label><div class="flex gap-2"><input type="password" id="sys-fusion-pass" value="${AUTH_PASS || ''}" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-mono text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1"><button onclick="updateMasterKey('admin_portal_pass', 'sys-fusion-pass')" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">Update Key</button></div></div>
+                        <div><label class="info-label">Medal Registry Key</label><div class="flex gap-2"><input type="password" id="sys-medal-pass" value="${MEDAL_PASS || ''}" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-mono text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1"><button onclick="updateMasterKey('medal_portal_pass', 'sys-medal-pass')" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">Update Key</button></div></div>
+                        <div><label class="info-label">Superadmin Key (Nocturnal)</label><div class="flex gap-2"><input type="password" id="sys-super-pass" value="${SUPER_PASS || ''}" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-mono text-sm outline-none focus:ring-1 focus:ring-cyan-500 flex-1"><button onclick="updateMasterKey('superadmin_portal_pass', 'sys-super-pass')" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">Update Key</button></div><p class="text-[8px] text-rose-400 font-bold uppercase mt-2 opacity-60">* Care: Changing this updates your own current access key.</p></div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem] border-cyan-500/10 flex items-center justify-center text-center"><div><i class="fa-solid fa-shield-halved text-cyan-500/20 text-6xl mb-4"></i><p class="text-space-400 text-xs font-medium max-w-[240px]">Master settings are only available to the authorized Superadmin node.</p></div></div>
+            </div>`;
+    }
+
+    function renderMedals(container) {
+        const startDate = medalCountdownStart ? new Date(medalCountdownStart) : new Date(); if (!medalCountdownStart) startDate.setDate(startDate.getDate() - 30);
+        const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
+        if (portalRole === 'medal') { document.getElementById('sub-title').innerText = `${startDate.toDateString()} — ${endDate.toDateString()}`; document.getElementById('sub-title').classList.add('text-cyan-400'); document.getElementById('sub-title').classList.remove('text-space-400'); }
+        const medalMap = {};
+        allAttendance.forEach(r => {
+            const d = new Date(r.date);
+            if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
+                if (!medalMap[r.employee_id]) medalMap[r.employee_id] = { gold: 0, silver: 0 };
+                const match = (r.note || "").match(/\((\d+)\s*mins\)/);
+                if (match && parseInt(match[1]) >= 5) medalMap[r.employee_id].gold++; else medalMap[r.employee_id].silver++;
+            }
+        });
+        const medalEmps = employees.filter(e => !["Manager", "Assistant Manager", "Excrew", "Coordinator", "Senior Crew", "Administrator"].includes(e.position));
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-full"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-3 md:px-10 py-4 table-header-text">Personnel</th><th class="hidden sm:table-cell px-10 py-4 table-header-text text-center">Employee ID</th><th class="px-2 md:px-10 py-4 table-header-text text-center">Gold</th><th class="px-2 md:px-10 py-4 table-header-text text-center">Silver</th></tr></thead><tbody class="divide-y divide-white/5">`;
+        const positionOrder = ["team leader", "cashier", "dispatch", "ss", "cic", "assembler", "fryer", "noodle", "dj", "backup"];
+        const grouped = medalEmps.reduce((acc, emp) => { const pos = emp.position || "Crew"; if (!acc[pos]) acc[pos] = []; acc[pos].push(emp); return acc; }, {});
+        Object.keys(grouped).sort((a, b) => { const iA = positionOrder.indexOf(a.toLowerCase()), iB = positionOrder.indexOf(b.toLowerCase()); if (iA === -1 && iB === -1) return a.localeCompare(b); if (iA === -1) return 1; if (iB === -1) return -1; return iA - iB; }).forEach(pos => {
+            grouped[pos].sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '')).forEach(emp => {
+                const m = medalMap[emp.employee_no] || { gold: 0, silver: 0 };
+                html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors text-xs md:text-sm"><td class="px-3 md:px-10 py-4"><div class="flex items-center gap-2 md:gap-4"><div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><span class="font-bold text-slate-100 block">${emp.first_name} ${emp.last_name}</span><p class="text-[8px] md:text-[9px] text-space-400 font-bold uppercase tracking-wider">ID: ${emp.employee_no}</p><p class="text-[7px] md:text-[8px] text-cyan-400 font-black uppercase tracking-widest opacity-80">${pos}</p></div></div></td><td class="hidden sm:table-cell px-10 py-4 font-mono text-xs text-cyan-400/80 text-center">${emp.employee_no}</td><td class="px-2 md:px-10 py-4 text-center"><div class="flex items-center justify-center"><div class="flex flex-wrap justify-center gap-0.5 max-w-[50px] md:max-w-none">${'<i class="fa-solid fa-medal text-amber-400 text-[10px] md:text-xs shadow-[0_0_8px_rgba(251,191,36,0.4)]"></i>'.repeat(m.gold)}</div></div></td><td class="px-2 md:px-10 py-4 text-center"><div class="flex items-center justify-center"><div class="flex flex-wrap justify-center gap-0.5 max-w-[50px] md:max-w-none">${'<i class="fa-solid fa-medal text-slate-400 text-[10px] md:text-xs shadow-[0_0_8px_rgba(148,163,184,0.4)]"></i>'.repeat(m.silver)}</div></div></td></tr>`;
+            });
+        });
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+
+    function renderAttendance(container) {
+        if (currentAttendance.length === 0) { container.innerHTML = `<div class="p-32 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No systemic records logged for this cycle.</div>`; return; }
+        const grouped = currentAttendance.reduce((acc, r) => { if (!acc[r.status]) acc[r.status] = []; acc[r.status].push(r); return acc; }, {});
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-10 py-4 table-header-text w-1/4">Status</th><th class="px-10 py-4 table-header-text w-1/3">Crew Name</th><th class="px-10 py-4 table-header-text w-1/4">Station</th><th class="px-10 py-4 table-header-text">Notes</th></tr></thead><tbody class="divide-y divide-white/5">`;
+        Object.entries(grouped).forEach(([status, group]) => {
+            if (status === 'RD') return;
+            let bc = "badge-cyan"; if (status === 'LATE') bc = "badge-amber"; else if (status === 'ABSENT' || status === 'IR') bc = "badge-rose"; else if (status === 'PRESENT' || status === 'RTW') bc = "badge-emerald";
+            group.forEach((r, idx) => {
+                const emp = employees.find(e => e.employee_no === r.employee_id) || { first_name: 'Unresolved', last_name: 'Node', position: 'Crew' };
+                html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-4 font-medium">${idx === 0 ? `<span class="glass-badge ${bc}">${status}</span> <span class="text-[10px] text-cyan-400/60 ml-2 font-bold font-mono">[${group.length}]</span>` : ''}</td><td class="px-10 py-4"><span class="font-bold text-slate-100 text-sm tracking-tight">${emp.first_name} ${emp.last_name}</span></td><td class="px-10 py-4"><span class="text-xs font-semibold text-space-400 uppercase tracking-wider">${emp.position}</span></td><td class="px-10 py-4">${r.note ? `<span class="text-xs text-rose-300 font-medium italic bg-rose-500/5 border border-rose-500/20 px-3 py-1.5 rounded-lg block w-max">"${r.note}"</span>` : '<span class="text-space-500 font-mono text-xs">—</span>'}</td></tr>`;
+            });
+        });
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+
+    function renderCrewProfiles(container, dataToRender) {
+        if (dataToRender.length === 0) { container.innerHTML = `<div class="p-32 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No operational personnel mapped.</div>`; return; }
+        const medalMap = {};
+        const startDate = medalCountdownStart ? new Date(medalCountdownStart) : new Date(); if (!medalCountdownStart) startDate.setDate(startDate.getDate() - 30);
+        const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
+        allAttendance.forEach(r => { const d = new Date(r.date); if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) { if (!medalMap[r.employee_id]) medalMap[r.employee_id] = { gold: 0, silver: 0 }; const match = (r.note || "").match(/\((\d+)\s*mins\)/); if (match && parseInt(match[1]) >= 5) medalMap[r.employee_id].gold++; else medalMap[r.employee_id].silver++; } });
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[1600px]"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-10 py-5 table-header-text">Personnel Core Identity</th><th class="px-10 py-5 table-header-text">Deployment Timeline</th><th class="px-10 py-5 table-header-text">Government System Registries</th><th class="px-10 py-5 table-header-text">Financial Ledger Vault</th><th class="px-10 py-5 table-header-text">Uniform Allocation Units</th><th class="px-10 py-5 table-header-text">Emergency Anchor Contact</th></tr></thead><tbody class="divide-y divide-white/5">`;
+        dataToRender.forEach(emp => {
+            let tenure = "---"; if (emp.date_hired) { const hired = new Date(emp.date_hired), diff = new Date() - hired, y = Math.floor(diff / 86400000 / 365), m = Math.floor((diff / 86400000 % 365) / 30); tenure = `${y > 0 ? y + 'y ' : ''}${m}m`; }
+            const m = medalMap[emp.employee_no] || { gold: 0, silver: 0 }; let icons = ''; for(let i=0; i<m.gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-[10px] shadow-[0_0_8px_rgba(251,191,36,0.4)]"></i>'; for(let i=0; i<m.silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-[10px] shadow-[0_0_8px_rgba(148,163,184,0.4)]"></i>';
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-5"><div class="flex items-start gap-4"><div class="min-w-[120px] pt-1"><span class="glass-badge badge-cyan">${emp.position}</span></div><div class="w-12 h-12 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><h4 class="font-bold text-slate-100 text-sm tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4><p class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">EMP ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-1">${icons}</div>${portalRole === 'superadmin' ? `<div class="mt-4 p-3 bg-space-950/50 border border-white/5 rounded-xl"><label class="info-label !text-[7px]">Vault Key</label><div class="flex gap-2"><input type="text" id="pass-${emp.employee_no}" value="${emp.portal_password || ''}" class="bg-space-950 border border-white/10 text-cyan-400 rounded px-2 py-1 text-[10px] font-mono w-24 outline-none"><button onclick="adminUpdatePass('${emp.employee_no}')" class="bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded text-[8px] font-black uppercase">Set</button></div></div>` : ''}<p class="text-[11px] text-space-400 mt-1 opacity-70">${emp.email || ''}</p><p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Status: <span class="text-slate-300 font-medium normal-case">${emp.marital_status || '--'}</span></p></div></div></td><td class="px-10 py-5"><p class="text-[11px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${emp.date_hired || '--'}</span></p><p class="text-[11px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p><p class="text-[10px] text-space-400 mt-1.5 uppercase font-bold tracking-wider">Born: <span class="text-slate-300 font-normal normal-case">${emp.birthday || '--'}</span></p><p class="text-[10px] text-space-500 mt-1 uppercase font-bold">Location: <span class="text-slate-300 font-normal normal-case">${emp.location || '--'}</span></p></td><td class="px-10 py-5 font-mono text-xs text-slate-300 space-y-0.5"><p><span class="text-[10px] text-space-400 font-sans font-bold uppercase tracking-wider mr-1">SSS:</span> ${emp.sss || '--'}</p><p><span class="text-[10px] text-space-400 font-sans font-bold uppercase tracking-wider mr-1">TIN:</span> ${emp.tin_number || '--'}</p><p><span class="text-[10px] text-space-400 font-sans font-bold uppercase tracking-wider mr-1">PH:</span> ${emp.phil_health || '--'}</p></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-xs text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p><p class="text-[10px] text-space-500 mt-1 font-mono">Vault-ID: ${emp.payroll_username || '--'}</p></td><td class="px-10 py-5"><div class="flex flex-wrap gap-1 mb-2 max-w-[240px]"><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Cap: ${emp.uniform_cap || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Apron: ${emp.uniform_apron || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Shirt: ${emp.uniform_shirt || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Pants: ${emp.uniform_pants || 0}</span></div><span class="glass-badge badge-emerald inline-block mt-0.5">${emp.is_certified ? 'Crew Certified' : 'Uncertified'}</span></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-space-500 font-bold uppercase tracking-wider mt-0.5">${emp.emergency_contact_relationship || ''}</p><p class="text-xs text-cyan-400 font-mono mt-1 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
+        });
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+
+    function renderDA(container, dataToRender) {
+        if (dataToRender.length === 0) { container.innerHTML = `<div class="p-32 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No warning flags logged inside archive.</div>`; return; }
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[1000px]"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-10 py-5 table-header-text w-1/4">Employee Name</th><th class="px-10 py-5 table-header-text w-1/4">Disciplinary Action</th><th class="px-10 py-5 table-header-text w-1/6">Report Status</th><th class="px-10 py-5 table-header-text">Notes</th></tr></thead><tbody class="divide-y divide-white/5">`;
+        dataToRender.forEach(rec => {
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-5 font-bold text-slate-100 text-sm tracking-tight cursor-pointer select-none" ondblclick="selectDAEmployee('${rec.employee_name}')">${rec.employee_name}</td><td class="px-10 py-5"><p class="text-xs text-rose-400 font-bold uppercase tracking-wider">${rec.da_type}</p><p class="text-[10px] text-space-500 mt-0.5 uppercase font-medium">Date Happen: ${rec.date_awol || '--'}</p></td><td class="px-10 py-5"><span class="glass-badge badge-emerald">${rec.status}</span><p class="text-[10px] text-space-500 mt-1 uppercase font-medium">${rec.date_report ? 'Report: ' + rec.date_report : 'For Reporting'}</p></td><td class="px-10 py-5 max-w-[400px]"><p class="text-xs text-slate-300 italic border-l border-cyan-500/30 pl-4 bg-cyan-500/[0.01] py-2 rounded-r-lg">"${rec.verdict || 'Processing incident variables...'}"</p></td></tr>`;
+        });
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+
+    function renderAttrition(container, dataToRender) {
+        if (dataToRender.length === 0) { container.innerHTML = `<div class="p-32 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No crew detachment sequences registered.</div>`; return; }
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[1000px]"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-10 py-5 table-header-text w-1/4">Detached Personnel</th><th class="px-10 py-5 table-header-text w-1/5">Former System Role</th><th class="px-10 py-5 table-header-text w-1/5">Cycle Range Timeline</th><th class="px-10 py-5 table-header-text">Official Separation Assessment</th></tr></thead><tbody class="divide-y divide-white/5">`;
+        dataToRender.forEach(rec => {
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-5 font-bold text-slate-100 text-sm tracking-tight">${rec.first_name} ${rec.last_name}</td><td class="px-10 py-5 uppercase font-black text-[10px] text-space-400 tracking-wider">${rec.position}</td><td class="px-10 py-5"><p class="text-xs text-rose-400 font-semibold">Last Day: ${rec.last_day_of_duty}</p><p class="text-[10px] text-space-500 mt-0.5">Deployed: ${rec.date_hired || '--'}</p></td><td class="px-10 py-5 max-w-[400px]"><p class="text-xs text-slate-300 italic border-l border-rose-500/30 pl-4 bg-rose-500/[0.01] py-2 rounded-r-lg">"${rec.reason_for_separation}"</p></td></tr>`;
+        });
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+</script>
+</body>
+</html>
