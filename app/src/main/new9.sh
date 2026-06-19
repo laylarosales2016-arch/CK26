@@ -1,1 +1,1 @@
-base64 -w 0 chowking_keystore.jks
+git commit -m "Enable automatic APK signing on GitHub"

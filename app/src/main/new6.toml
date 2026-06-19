@@ -1,2 +1,2 @@
-    [Convert]::ToBase64String([IO.File]::ReadAllBytes("chowking_keystore.jks"))
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("chowking_keystore.jks"))
     

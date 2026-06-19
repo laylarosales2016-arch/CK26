@@ -14,6 +14,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 import android.util.Log
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.core.content.FileProvider
+import java.io.File
 
 @Serializable
 data class UpdateInfo(
@@ -103,11 +108,7 @@ object UpdateChecker {
             .setTitle("Update Available")
             .setMessage(message.toString())
             .setPositiveButton("Update Now") { _, _ ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl))
-                activity.startActivity(intent)
-                if (updateInfo.isForceUpdate) {
-                    activity.finishAffinity()
-                }
+                startDownload(activity, updateInfo)
             }
 
         if (updateInfo.isForceUpdate) {
@@ -125,5 +126,73 @@ object UpdateChecker {
         }
 
         builder.show()
+    }
+
+    private fun startDownload(activity: Activity, updateInfo: UpdateInfo) {
+        val downloadManager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val uri = Uri.parse(updateInfo.downloadUrl)
+        
+        // Clear old update file if it exists
+        val oldFile = File(activity.cacheDir, "update.apk")
+        if (oldFile.exists()) oldFile.delete()
+
+        val request = DownloadManager.Request(uri)
+            .setTitle("Downloading Chowking Update")
+            .setDescription("New version ${updateInfo.versionName}")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalFilesDir(activity, null, "update.apk") // Keep this but ensure file_paths is correct
+            .setAllowedOverMetered(true)
+            .setAllowedOverRoaming(true)
+
+        val downloadId = downloadManager.enqueue(request)
+
+        val onComplete = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadId) {
+                    val query = DownloadManager.Query().setFilterById(downloadId)
+                    val cursor = downloadManager.query(query)
+                    if (cursor.moveToFirst()) {
+                        val statusIdx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                        val reasonIdx = cursor.getColumnIndex(DownloadManager.COLUMN_REASON)
+                        
+                        if (statusIdx != -1) {
+                            val status = cursor.getInt(statusIdx)
+                            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                                installApk(activity)
+                            } else if (reasonIdx != -1) {
+                                val reason = cursor.getInt(reasonIdx)
+                                Log.e(TAG, "Download failed with reason: $reason")
+                            }
+                        }
+                    }
+                    cursor.close()
+                    activity.unregisterReceiver(this)
+                }
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            activity.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        }
+    }
+
+    private fun installApk(activity: Activity) {
+        val file = File(activity.getExternalFilesDir(null), "update.apk")
+        if (file.exists()) {
+            val contentUri = FileProvider.getUriForFile(
+                activity,
+                "${activity.packageName}.fileprovider",
+                file
+            )
+            val installIntent = Intent(Intent.ACTION_VIEW)
+            installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            installIntent.setDataAndType(contentUri, "application/vnd.android.package-archive")
+            activity.startActivity(installIntent)
+        }
     }
 }
