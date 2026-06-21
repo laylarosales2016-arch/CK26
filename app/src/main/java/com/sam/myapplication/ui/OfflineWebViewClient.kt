@@ -91,6 +91,9 @@ class OfflineWebViewClient(
         if (url != null && (url.contains("Login") || url.endsWith(".com/"))) {
             onLoginTrigger(view)
         }
+        // Always attempt to trigger scraper on every page finish, 
+        // the scraper JS itself should handle URL filtering
+        onScrapeTrigger(view)
     }
 
     override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: android.net.http.SslError?) {

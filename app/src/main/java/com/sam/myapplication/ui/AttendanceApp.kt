@@ -456,40 +456,68 @@ fun BackgroundMallIDScraper(
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
-                layoutParams = ViewGroup.LayoutParams(0, 0)
+                // Some devices need a non-zero size to load correctly
+                layoutParams = ViewGroup.LayoutParams(1, 1)
                 webViewInstance = this
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    databaseEnabled = true
+                    userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                }
                 
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
+                        val portalUser = viewModel.getPortalUsername()
+                        val portalPass = viewModel.getPortalPassword()
+
+                        if (url?.contains("Login") == true) {
+                            // Try to auto-login if we hit a login page during scraping
+                            view?.evaluateJavascript("""
+                                (function() {
+                                    var u = document.getElementById('Input_UsernameVal') || document.querySelector('input[id*="User"]');
+                                    var p = document.getElementById('Input_PasswordVal') || document.querySelector('input[id*="Pass"]');
+                                    var b = document.querySelector('#b5-Button button') || document.querySelector('button.btn-primary');
+                                    if (u && p && b) {
+                                        u.value = '$portalUser';
+                                        p.value = '$portalPass';
+                                        ['input', 'change'].forEach(t => u.dispatchEvent(new Event(t, { bubbles: true })));
+                                        ['input', 'change'].forEach(t => p.dispatchEvent(new Event(t, { bubbles: true })));
+                                        setTimeout(() => b.click(), 500);
+                                    }
+                                })();
+                            """.trimIndent(), null)
+                            return
+                        }
+
                         if (url?.contains("MallIDDetails") == true) {
-                            // EXTRA WAIT: Increased to 10 seconds to ensure website fully opens/renders
                             scope.launch {
-                                delay(10000) 
+                                // Wait for dynamic content
+                                delay(8000) 
                                 view?.evaluateJavascript("""
                                     (function() {
                                         var status = "";
                                         
-                                        // 1. Precise Match: Look for specific class names or data-expression
+                                        // 1. Check specific OutSystems expressions
                                         var exprs = document.querySelectorAll('[data-expression]');
                                         for (var j = 0; j < exprs.length; j++) {
                                             var txt = exprs[j].innerText.trim();
-                                            if (["Active", "For Renewal", "Printing", "Pick up", "Orientation", "For Re-Orientation", "For Printing", "Draft", "For Pick Up", "Expired", "Cancelled", "Rejected", "For Approval"].some(s => txt.toLowerCase() === s.toLowerCase())) {
+                                            var valid = ["Active", "For Renewal", "Printing", "Pick up", "Orientation", "Draft", "Expired", "Cancelled", "Rejected", "For Approval"];
+                                            if (valid.some(s => txt.toLowerCase().includes(s.toLowerCase()))) {
                                                 status = txt;
                                                 break;
                                             }
                                         }
-                                        // 2. Fallback: Search for labels and siblings (OutSystems specific)
+
+                                        // 2. Fallback: Search by label
                                         if (!status) {
-                                            var labels = document.querySelectorAll('label');
+                                            var labels = document.querySelectorAll('label, span');
                                             for(var i=0; i<labels.length; i++) {
-                                                var labelText = labels[i].innerText.toLowerCase();
-                                                if(labelText.indexOf('id status') !== -1 || labelText.indexOf('request status') !== -1) {
-                                                    var container = labels[i].closest('[data-container]') || labels[i].parentElement.parentElement;
-                                                    var val = container.innerText.replace('ID Status', '').replace('Request Status', '').trim();
-                                                    if(val) { status = val.split('\n')[0]; break; }
+                                                var t = labels[i].innerText.toLowerCase();
+                                                if(t.includes('id status') || t.includes('request status')) {
+                                                    var p = labels[i].parentElement;
+                                                    status = p.innerText.replace(/.*status/i, '').trim().split('\n')[0];
+                                                    if(status) break;
                                                 }
                                             }
                                         }
@@ -497,23 +525,21 @@ fun BackgroundMallIDScraper(
                                     })();
                                 """.trimIndent()) { result ->
                                     val status = result.trim('"')
-                                    val emp = employeesToScrape[currentIndex]
+                                    val emp = employeesToScrape.getOrNull(currentIndex) ?: return@evaluateJavascript
                                     
                                     scope.launch {
                                         if (status.isNotBlank() && status != "null") {
                                             viewModel.updateMallIdStatus(emp.id, status)
                                             Toast.makeText(context, "Scraped: ${emp.firstName} -> $status", Toast.LENGTH_SHORT).show()
-                                            delay(5000)
+                                            delay(2000)
                                             currentRetryCount = 0
-                                            currentIndex++ // SUCCESS: Move to next
+                                            currentIndex++
                                         } else {
-                                            // Status missing or page not fully ready yet
                                             if (currentRetryCount < 2) {
-                                                Toast.makeText(context, "Retrying ${emp.firstName} (Attempt ${currentRetryCount + 2})...", Toast.LENGTH_SHORT).show()
                                                 currentRetryCount++
-                                                retryTrigger++ // Triggers reload in LaunchedEffect
+                                                retryTrigger++ 
                                             } else {
-                                                Toast.makeText(context, "No status found for ${emp.firstName}. Skipping.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Could not read status for ${emp.firstName}", Toast.LENGTH_SHORT).show()
                                                 currentRetryCount = 0
                                                 currentIndex++
                                             }
@@ -521,9 +547,6 @@ fun BackgroundMallIDScraper(
                                     }
                                 }
                             }
-                        } else if (url?.contains("Login") == true) {
-                            Toast.makeText(context, "Scraper paused: Web session expired. Please login manually in 'Mall ID Details (Manual)'", Toast.LENGTH_LONG).show()
-                            viewModel.stopScrapingMallId()
                         }
                     }
                 }
