@@ -34,4 +34,10 @@ interface ScheduleDao {
 
     @Delete
     suspend fun deleteShiftTemplate(template: ShiftTemplate)
+
+    @Query("DELETE FROM employee_schedules")
+    suspend fun clearAllSchedules()
+
+    @Query("DELETE FROM shift_templates")
+    suspend fun clearAllShiftTemplates()
 }

@@ -19,5 +19,8 @@ data class BackupData(
     val daRecords: List<DARecord> = emptyList(),
     val dailyNotes: List<DailySummaryNote> = emptyList(),
     val workPermits: List<WorkPermit> = emptyList(),
-    val messages: List<ChatMessage> = emptyList()
+    val messages: List<ChatMessage> = emptyList(),
+    val schedules: List<EmployeeSchedule> = emptyList(),
+    val shiftTemplates: List<ShiftTemplate> = emptyList(),
+    val activityLogs: List<ActivityLog> = emptyList()
 )

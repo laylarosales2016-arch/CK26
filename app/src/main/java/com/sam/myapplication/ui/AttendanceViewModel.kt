@@ -1635,9 +1635,12 @@ class AttendanceViewModel(
                 val dailyNotes = repository.allDailyNotes.first()
                 val workPermits = repository.allPermits.first()
                 val messages = repository.allMessages.first()
+                val schedules = repository.allSchedulesFirst()
+                val shiftTemplates = repository.allShiftTemplatesFirst()
+                val activityLogs = repository.allActivityLogs.first()
 
                 val employeeBackups = employees.mapIndexed { index, emp ->
-                    _syncProgress.value = (index.toFloat() / employees.size) * 0.5f
+                    _syncProgress.value = (index.toFloat() / employees.size) * 0.4f
                     var base64: String? = null
                     if (!emp.profileImageUri.isNullOrEmpty()) {
                         try {
@@ -1662,7 +1665,10 @@ class AttendanceViewModel(
                     daRecords = da,
                     dailyNotes = dailyNotes,
                     workPermits = workPermits,
-                    messages = messages
+                    messages = messages,
+                    schedules = schedules,
+                    shiftTemplates = shiftTemplates,
+                    activityLogs = activityLogs
                 )
 
                 val jsonString = json.encodeToString(backupData)
@@ -1701,12 +1707,15 @@ class AttendanceViewModel(
                 repository.clearAllPermits()
                 repository.clearAllDA()
                 repository.clearAllAttrition()
+                repository.clearAllSchedules()
+                repository.clearAllShiftTemplates()
+                repository.clearActivityLogs()
                 repository.clearAllEmployees()
 
                 _syncStatus.value = "Importing employees..."
                 // Import Employees and Photos
                 backupData.employees.forEachIndexed { index, backup ->
-                    _syncProgress.value = (index.toFloat() / backupData.employees.size) * 0.2f
+                    _syncProgress.value = (index.toFloat() / backupData.employees.size) * 0.15f
                     var updatedEmp = backup.employee
                     // Restore profile image from base64 if available
                     if (!backup.profileImageBase64.isNullOrEmpty()) {
@@ -1728,61 +1737,79 @@ class AttendanceViewModel(
                 _syncStatus.value = "Importing attendance..."
                 // Import Attendance
                 backupData.attendanceRecords.forEachIndexed { index, it -> 
-                    _syncProgress.value = 0.2f + ((index.toFloat() / backupData.attendanceRecords.size) * 0.2f)
+                    _syncProgress.value = 0.15f + ((index.toFloat() / backupData.attendanceRecords.size) * 0.15f)
                     repository.insertAttendance(it) 
                 }
 
                 _syncStatus.value = "Importing DTR..."
                 // Import DTR
                 backupData.dailyTimeRecords.forEachIndexed { index, it -> 
-                    _syncProgress.value = 0.4f + ((index.toFloat() / backupData.dailyTimeRecords.size) * 0.2f)
+                    _syncProgress.value = 0.3f + ((index.toFloat() / backupData.dailyTimeRecords.size) * 0.15f)
                     repository.insertDTR(it) 
                 }
 
                 _syncStatus.value = "Importing requests..."
                 // Import Requests
                 backupData.requests.forEachIndexed { index, it -> 
-                    _syncProgress.value = 0.6f + ((index.toFloat() / backupData.requests.size) * 0.2f)
+                    _syncProgress.value = 0.45f + ((index.toFloat() / backupData.requests.size) * 0.15f)
                     repository.insertRequest(it) 
                 }
 
                 _syncStatus.value = "Importing announcements..."
                 // Import Announcements
                 backupData.announcements.forEachIndexed { index, it -> 
-                    _syncProgress.value = 0.8f + ((index.toFloat() / backupData.announcements.size) * 0.05f)
+                    _syncProgress.value = 0.6f + ((index.toFloat() / backupData.announcements.size) * 0.05f)
                     repository.insertAnnouncement(it) 
                 }
 
                 _syncStatus.value = "Importing attrition..."
                 // Import Attrition
                 backupData.attritionRecords.forEachIndexed { index, it ->
-                    _syncProgress.value = 0.85f + ((index.toFloat() / backupData.attritionRecords.size) * 0.05f)
+                    _syncProgress.value = 0.65f + ((index.toFloat() / backupData.attritionRecords.size) * 0.05f)
                     repository.insertAttrition(it)
                 }
 
                 _syncStatus.value = "Importing DA..."
                 // Import DA
                 backupData.daRecords.forEachIndexed { index, it ->
-                    _syncProgress.value = 0.9f + ((index.toFloat() / backupData.daRecords.size) * 0.04f)
+                    _syncProgress.value = 0.7f + ((index.toFloat() / backupData.daRecords.size) * 0.05f)
                     repository.insertDA(it)
                 }
 
                 _syncStatus.value = "Importing Daily Notes..."
                 backupData.dailyNotes.forEachIndexed { index, it ->
-                    _syncProgress.value = 0.94f + ((index.toFloat() / backupData.dailyNotes.size) * 0.03f)
+                    _syncProgress.value = 0.75f + ((index.toFloat() / backupData.dailyNotes.size) * 0.05f)
                     repository.insertDailyNote(it)
                 }
 
                 _syncStatus.value = "Importing Permits..."
                 backupData.workPermits.forEachIndexed { index, it ->
-                    _syncProgress.value = 0.97f + ((index.toFloat() / backupData.workPermits.size) * 0.01f)
+                    _syncProgress.value = 0.8f + ((index.toFloat() / backupData.workPermits.size) * 0.05f)
                     repository.insertPermit(it)
                 }
 
                 _syncStatus.value = "Importing Messages..."
                 backupData.messages.forEachIndexed { index, it ->
-                    _syncProgress.value = 0.98f + ((index.toFloat() / backupData.messages.size) * 0.02f)
+                    _syncProgress.value = 0.85f + ((index.toFloat() / backupData.messages.size) * 0.05f)
                     repository.insertMessage(it)
+                }
+
+                _syncStatus.value = "Importing Schedules..."
+                backupData.schedules.forEachIndexed { index, it ->
+                    _syncProgress.value = 0.9f + ((index.toFloat() / backupData.schedules.size) * 0.05f)
+                    repository.insertSchedule(it)
+                }
+
+                _syncStatus.value = "Importing Shift Templates..."
+                backupData.shiftTemplates.forEachIndexed { index, it ->
+                    _syncProgress.value = 0.95f + ((index.toFloat() / backupData.shiftTemplates.size) * 0.02f)
+                    repository.insertShiftTemplate(it)
+                }
+
+                _syncStatus.value = "Importing Activity Logs..."
+                backupData.activityLogs.forEachIndexed { index, it ->
+                    _syncProgress.value = 0.97f + ((index.toFloat() / backupData.activityLogs.size) * 0.03f)
+                    repository.insertActivityLog(it)
                 }
 
                 _syncStatus.value = "Import complete"

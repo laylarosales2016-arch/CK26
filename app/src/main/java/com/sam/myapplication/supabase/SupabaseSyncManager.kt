@@ -492,6 +492,13 @@ class SupabaseSyncManager(
                 Log.e("SupabaseSync", "Chat sync failed during retrieval: ${e.message}")
             }
 
+            // 14. Activity Logs
+            try {
+                retrieveAllActivityLogs()
+            } catch (e: Exception) {
+                Log.e("SupabaseSync", "Activity logs sync failed during retrieval: ${e.message}")
+            }
+
             Log.d("SupabaseSync", "Bulk retrieval complete.")
         } catch (e: Exception) {
             Log.e("SupabaseSync", "CRITICAL SYNC FAILURE: ${e.message}")

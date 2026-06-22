@@ -105,6 +105,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
@@ -156,6 +157,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import com.sam.myapplication.R
 import com.sam.myapplication.data.AttendanceStatus
 import com.sam.myapplication.data.Employee
+import com.sam.myapplication.data.HolidayHelper
+import com.sam.myapplication.data.HolidayType
+import androidx.compose.material.icons.filled.Star
 import com.sam.myapplication.data.AttendanceRecord
 import com.sam.myapplication.data.AttendanceRequest
 import com.sam.myapplication.data.DailyTimeRecord
@@ -867,17 +871,15 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Surface(
-                modifier = Modifier.size(110.s()),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp
+                modifier = Modifier.size(140.s()),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.Transparent
             ) {
                 AsyncImage(
                     model = R.drawable.app_icon,
                     contentDescription = "Chowking Logo",
-                    modifier = Modifier
-                        .padding(16.s())
-                        .clip(CircleShape)
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
                 )
             }
             
@@ -2539,8 +2541,8 @@ fun DAManagerDialog(
 
     val filteredRecords = remember(daRecords, filterEmployeeId, showPendingOnly, showExcrewOnly, employees) {
         daRecords.filter { rec ->
-            val emp = employees.find { it.employeeNo == rec.employeeId }
-            val isExcrew = emp?.position == "Excrew"
+            val emp = employees.find { it.id == rec.employeeId || it.employeeNo == rec.employeeId }
+            val isExcrew = emp?.position?.equals("Excrew", ignoreCase = true) == true
             
             val idMatch = filterEmployeeId.isEmpty() || rec.employeeId.contains(filterEmployeeId, ignoreCase = true)
             val statusMatch = !showPendingOnly || (rec.status.trim().equals("Not Yet Reporting", ignoreCase = true) || rec.dateReport.isNullOrBlank())
@@ -3249,8 +3251,12 @@ fun DTRCalendar(
     attendanceRecords: List<AttendanceRecord>,
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
-    onMonthChange: (YearMonth) -> Unit
+    onMonthChange: (YearMonth) -> Unit,
+    medalCountdownStart: String? = null
 ) {
+    val medalStart = medalCountdownStart?.let { try { LocalDate.parse(it) } catch(e:Exception) { null } } ?: LocalDate.now().minusDays(30)
+    val medalEnd = medalStart.plusDays(30)
+
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -3299,6 +3305,22 @@ fun DTRCalendar(
                             val isRD = attendanceRecords.any { it.date == date.toString() && it.status == AttendanceStatus.RD }
                             val isSelected = selectedDate == date
 
+                            val attRecord = attendanceRecords.find { it.date == date.toString() }
+                            val isInMedalWindow = (date.isEqual(medalStart) || date.isAfter(medalStart)) && date.isBefore(medalEnd)
+                            
+                            val holiday = HolidayHelper.getHoliday(date)
+                            
+                            var medalType: String? = null
+                            if (isInMedalWindow && attRecord != null && (attRecord.status == AttendanceStatus.LATE || attRecord.status == AttendanceStatus.OVERBREAK)) {
+                                val note = attRecord.note ?: ""
+                                if (note.contains(" mins)")) {
+                                    val mins = note.substringAfter("(").substringBefore(" mins)").toIntOrNull() ?: 0
+                                    medalType = if (mins >= 5) "GOLD" else "SILVER"
+                                } else {
+                                    medalType = "GOLD"
+                                }
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -3325,7 +3347,23 @@ fun DTRCalendar(
                                     .clickable { onDateSelected(date) },
                                 contentAlignment = Alignment.Center
                             ) {
+                                if (holiday != null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = if (holiday.type == HolidayType.REGULAR) Color(0xFFFFD700) else Color(0xFFC0C0C0),
+                                        modifier = Modifier.size(24.dp).alpha(0.3f).align(Alignment.Center)
+                                    )
+                                }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    if (medalType != null) {
+                                        Icon(
+                                            imageVector = Icons.Default.MilitaryTech,
+                                            contentDescription = null,
+                                            tint = if (medalType == "GOLD") Color(0xFFFFD700) else Color(0xFFC0C0C0),
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                    }
                                     if (isRD) {
                                         Text("RD", style = MaterialTheme.typography.labelSmall, color = if (isSelected) Color.White else Color.Blue, fontWeight = FontWeight.Bold, modifier = Modifier.scale(0.8f))
                                     }
@@ -3460,6 +3498,7 @@ fun DTRDialog(
     initialMonth: YearMonth,
     attendanceRecords: List<AttendanceRecord>,
     dtrRecords: List<DailyTimeRecord>,
+    medalCountdownStart: String? = null,
     onDismiss: () -> Unit,
     onSaveDTR: (String, String?, String?, String?, Boolean, String?) -> Unit,
     onDeleteDTR: (String) -> Unit,
@@ -3505,7 +3544,8 @@ fun DTRDialog(
                     attendanceRecords = attendanceRecords,
                     selectedDate = selectedDate,
                     onDateSelected = { date -> selectedDate = date },
-                    onMonthChange = { month = it }
+                    onMonthChange = { month = it },
+                    medalCountdownStart = medalCountdownStart
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -3973,11 +4013,13 @@ fun EmployeeDetailScreen(
     }
 
     if (showDTRDialog && employee != null) {
+        val medalCountdownStart by viewModel.medalCountdownStart.collectAsState()
         DTRDialog(
             employee = employee,
             initialMonth = currentMonth,
             attendanceRecords = attendanceRecords,
             dtrRecords = dtrRecords,
+            medalCountdownStart = medalCountdownStart,
             onDismiss = { showDTRDialog = false },
             onSaveDTR = { date, tin, tout, n, hasOT, otApproved ->
                 viewModel.saveDTRRecord(employeeId, listOf(date), tin, tout, n, hasOT, otApproved)
@@ -5156,7 +5198,19 @@ fun DailySummaryDialog(
 
     // Only load from database when the date changes
     LaunchedEffect(selectedDate) {
-        noteText = viewModel.getDailyNote(selectedDate.toString()).first()?.note ?: ""
+        val existingNote = viewModel.getDailyNote(selectedDate.toString()).first()?.note ?: ""
+        if (existingNote.isBlank()) {
+            // Auto-add holiday note if it's a holiday and no note exists
+            val holidayInfo = HolidayHelper.getHolidayInfo(selectedDate)
+            if (holidayInfo != null) {
+                noteText = holidayInfo
+                viewModel.saveDailyNote(selectedDate.toString(), holidayInfo)
+            } else {
+                noteText = ""
+            }
+        } else {
+            noteText = existingNote
+        }
     }
 
     // Debounce the save operation so it doesn't "jiggle" while typing
@@ -5298,6 +5352,7 @@ fun SummaryCalendar(
                             val hasAbsent = attendanceRecords.any { it.date == date.toString() && it.status == com.sam.myapplication.data.AttendanceStatus.ABSENT }
                             val hasAttendance = attendanceRecords.any { it.date == date.toString() && it.status != com.sam.myapplication.data.AttendanceStatus.RD }
                             val hasNote = dailyNotes.any { it.date == date.toString() && !it.note.isNullOrBlank() }
+                            val holiday = HolidayHelper.getHoliday(date)
 
                             Box(
                                 modifier = Modifier
@@ -5327,6 +5382,14 @@ fun SummaryCalendar(
                                     .clickable { onDateSelected(date) },
                                 contentAlignment = Alignment.Center
                             ) {
+                                if (holiday != null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = if (holiday.type == HolidayType.REGULAR) Color(0xFFFFD700) else Color(0xFFC0C0C0),
+                                        modifier = Modifier.size(20.dp).alpha(0.3f).align(Alignment.Center)
+                                    )
+                                }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         text = dayNumber.toString(),
@@ -5339,15 +5402,6 @@ fun SummaryCalendar(
                                         },
                                         fontWeight = if (isSelected || hasAbsent || hasNote || hasAttendance) FontWeight.Bold else FontWeight.Normal
                                     )
-                                    // Remove the dot indicator if it's highlighted Red/Green to keep it clean
-                                    if (!isSelected && !hasAbsent && !hasNote && hasAttendance) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.dp)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.primary)
-                                        )
-                                    }
                                 }
                             }
                         } else {

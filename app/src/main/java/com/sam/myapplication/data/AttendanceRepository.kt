@@ -129,6 +129,8 @@ class AttendanceRepository(
     suspend fun clearAllAnnouncements() = announcementDao.clearAll()
     suspend fun clearAllMessages() = chatMessageDao.clearAll()
     suspend fun clearAllPermits() = workPermitDao.clearAll()
+    suspend fun clearAllSchedules() = scheduleDao.clearAllSchedules()
+    suspend fun clearAllShiftTemplates() = scheduleDao.clearAllShiftTemplates()
 
     val allAttendanceRecords: Flow<List<AttendanceRecord>> = employeeDao.getAllAttendanceRecords()
 
