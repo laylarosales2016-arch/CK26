@@ -64,7 +64,8 @@ data class Employee(
     @SerialName("is_hidden_from_scheduler") val isHiddenFromScheduler: Boolean = false,
     @SerialName("scheduler_position") val schedulerPosition: String? = null,
     @SerialName("scheduler_row_color") val schedulerRowColor: Int? = null,
-    @SerialName("scheduler_font_color") val schedulerFontColor: Int? = null
+    @SerialName("scheduler_font_color") val schedulerFontColor: Int? = null,
+    @SerialName("scheduler_order") val schedulerOrder: Int = 0
 )
 
 @Serializable

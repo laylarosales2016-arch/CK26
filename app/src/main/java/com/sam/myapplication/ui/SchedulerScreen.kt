@@ -67,6 +67,7 @@ fun SchedulerScreen(
     var showDeleteIcons by remember { mutableStateOf(false) }
     var showPrintButtons by remember { mutableStateOf(false) }
     var editingCell by remember { mutableStateOf<Pair<Employee, LocalDate>?>(null) }
+    var editingOrderEmployee by remember { mutableStateOf<Employee?>(null) }
     var employeeToDelete by remember { mutableStateOf<Employee?>(null) }
     var positionToColor by remember { mutableStateOf<String?>(null) }
     var hiddenDayIndices by remember { mutableStateOf(setOf<Int>()) }
@@ -312,7 +313,7 @@ fun SchedulerScreen(
                                 val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
                                 val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
                                 isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
-                            }.sortedBy { it.firstName }
+                            }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
                             if (posEmployees.isNotEmpty()) {
                                 item {
@@ -337,6 +338,7 @@ fun SchedulerScreen(
                                             exportTargetEmployee = it
                                             showExportDatePicker = true
                                         },
+                                        onEditOrder = { editingOrderEmployee = it },
                                         showDeleteIcon = showDeleteIcons,
                                         showPrintIcon = showPrintButtons
                                     )
@@ -371,7 +373,7 @@ fun SchedulerScreen(
                                 val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
                                 val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
                                 isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
-                            }.sortedBy { it.firstName }
+                            }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
                             if (posEmployees.isNotEmpty()) {
                                 item {
@@ -396,6 +398,7 @@ fun SchedulerScreen(
                                             exportTargetEmployee = it
                                             showExportDatePicker = true
                                         },
+                                        onEditOrder = { editingOrderEmployee = it },
                                         showDeleteIcon = showDeleteIcons,
                                         showPrintIcon = showPrintButtons
                                     )
@@ -413,7 +416,7 @@ fun SchedulerScreen(
                             val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
                             val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
                             isOtherPos && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
-                        }.sortedBy { it.firstName }
+                        }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
                         if (otherEmployees.isNotEmpty()) {
                             item {
@@ -454,6 +457,38 @@ fun SchedulerScreen(
                 }
             }
         }
+    }
+
+    if (editingOrderEmployee != null) {
+        var newOrder by remember { mutableStateOf(editingOrderEmployee!!.schedulerOrder.toString()) }
+        AlertDialog(
+            onDismissRequest = { editingOrderEmployee = null },
+            title = { Text("Change Rank for ${editingOrderEmployee?.firstName}") },
+            text = {
+                Column {
+                    Text("Enter a number to decide the order in the station (smaller numbers come first).")
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newOrder,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) newOrder = it },
+                        label = { Text("Rank Number") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    editingOrderEmployee?.let { emp ->
+                        viewModel.updateEmployee(context, emp.copy(schedulerOrder = newOrder.toIntOrNull() ?: 0))
+                    }
+                    editingOrderEmployee = null
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingOrderEmployee = null }) { Text("Cancel") }
+            }
+        )
     }
 
     if (showAddEmployeeDialog) {
@@ -816,6 +851,7 @@ fun EmployeeScheduleRow(
     onClick: (LocalDate) -> Unit,
     onDeleteEmployee: (Employee) -> Unit,
     onExportClick: (Employee) -> Unit,
+    onEditOrder: (Employee) -> Unit,
     showDeleteIcon: Boolean,
     showPrintIcon: Boolean
 ) {
@@ -836,8 +872,8 @@ fun EmployeeScheduleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${employee.firstName}",
-                modifier = Modifier.weight(1f),
+                text = "${employee.schedulerOrder}. ${employee.firstName}",
+                modifier = Modifier.weight(1f).clickable { onEditOrder(employee) },
                 fontSize = if (isLandscape) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = if (isLandscape) 12.sp else 14.sp,
