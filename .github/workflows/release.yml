@@ -25,6 +25,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Auto-Increment Version
+        id: auto_inc
+        run: |
+          # 1. Get current values
+          OLD_CODE=$(grep "versionCode =" app/build.gradle.kts | awk -F' = ' '{print $2}' | tr -d ' ')
+          OLD_NAME=$(grep "versionName =" app/build.gradle.kts | awk -F' = ' '{print $2}' | tr -d '"' | tr -d ' ')
+          
+          # 2. Increment values
+          NEW_CODE=$((OLD_CODE + 1))
+          NEW_NAME=$((OLD_NAME + 1))
+          
+          # 3. Update build.gradle.kts using sed
+          sed -i "s/versionCode = $OLD_CODE/versionCode = $NEW_CODE/" app/build.gradle.kts
+          sed -i "s/versionName = \"$OLD_NAME\"/versionName = \"$NEW_NAME\"/" app/build.gradle.kts
+          
+          echo "NEW_CODE=$NEW_CODE" >> $GITHUB_ENV
+          echo "NEW_NAME=$NEW_NAME" >> $GITHUB_ENV
+          echo "tag_name=v$NEW_NAME" >> $GITHUB_OUTPUT
+
       - name: Build APK
         run: ./gradlew assembleRelease
 
@@ -40,21 +59,12 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "34.0.0"
 
-      - name: Get Version Info
-        id: version_info
-        run: |
-          VERSION_NAME=$(grep "versionName =" app/build.gradle.kts | awk -F' = ' '{print $2}' | tr -d '"' | tr -d ' ')
-          VERSION_CODE=$(grep "versionCode =" app/build.gradle.kts | awk -F' = ' '{print $2}' | tr -d ' ')
-          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
-          echo "tag_name=v$VERSION_NAME-$VERSION_CODE" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version_info.outputs.tag_name }}
-          name: Release ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          tag_name: ${{ steps.auto_inc.outputs.tag_name }}
+          name: Release ${{ env.NEW_NAME }} (${{ env.NEW_CODE }})
           draft: false
           prerelease: false
           files: |
@@ -65,21 +75,21 @@ jobs:
       - name: Update Update Config JSON
         run: |
           SIGNED_APK_NAME=$(basename ${{ steps.sign_app.outputs.signedReleaseFile }})
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version_info.outputs.tag_name }}/$SIGNED_APK_NAME"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.auto_inc.outputs.tag_name }}/$SIGNED_APK_NAME"
           cat <<EOF > update_config.json
           {
-            "versionCode": ${{ env.VERSION_CODE }},
-            "versionName": "${{ env.VERSION_NAME }}",
+            "versionCode": ${{ env.NEW_CODE }},
+            "versionName": "${{ env.NEW_NAME }}",
             "downloadUrl": "$DOWNLOAD_URL",
             "isForceUpdate": false,
-            "changes": "Official Signed Release build."
+            "changes": "Automatic version bump Release."
           }
           EOF
 
-      - name: Commit and Push update_config.json
+      - name: Commit and Push Updated Version
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add update_config.json
-          git commit -m "Update update_config.json to ${{ env.VERSION_NAME }}" || echo "No changes to commit"
+          git add app/build.gradle.kts update_config.json
+          git commit -m "Auto-increment version to ${{ env.NEW_NAME }} [skip ci]" || echo "No changes to commit"
           git push
