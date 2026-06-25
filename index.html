@@ -2252,13 +2252,18 @@
                             }).join('')}
                         </tr>
                     `;
-                    grouped[pos].sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")).forEach(emp => {
+                    grouped[pos].sort((a, b) => {
+                        if ((a.scheduler_order || 0) !== (b.scheduler_order || 0)) {
+                            return (a.scheduler_order || 0) - (b.scheduler_order || 0);
+                        }
+                        return (a.last_name || "").localeCompare(b.last_name || "");
+                    }).forEach(emp => {
                         const targetId = emp.employee_no;
                         const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
                         unitHtml += `
                             <tr>
                                 <td class="sched-name-cell">
-                                    ${emp.first_name}
+                                    ${emp.scheduler_order ? emp.scheduler_order + '. ' : ''}${emp.first_name}
                                 </td>
                                 ${weekDays.map((date, i) => {
                                     if (hiddenSchedDayIndices.has(i)) return '';
