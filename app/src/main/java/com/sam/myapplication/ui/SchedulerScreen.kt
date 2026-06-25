@@ -447,6 +447,7 @@ fun SchedulerScreen(
                                         exportTargetEmployee = it
                                         showExportDatePicker = true
                                     },
+                                    onEditOrder = { editingOrderEmployee = it },
                                     showDeleteIcon = showDeleteIcons,
                                     showPrintIcon = showPrintButtons
                                 )
