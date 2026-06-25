@@ -1,7 +1,7 @@
 {
-  "versionCode": 15,
-  "versionName": "15",
-  "downloadUrl": "https://github.com/laylarosales2016-arch/CK26/releases/download/v15-15/app-release-unsigned-signed.apk",
+  "versionCode": 16,
+  "versionName": "16",
+  "downloadUrl": "https://github.com/laylarosales2016-arch/CK26/releases/download/v16/app-release-unsigned-signed.apk",
   "isForceUpdate": false,
-  "changes": "Official Signed Release build."
+  "changes": "Automatic version bump Release."
 }
