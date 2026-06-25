@@ -581,6 +581,25 @@
                     <option value="">Select Shift...</option>
                 </select>
             </div>
+            <div>
+                <label class="info-label">Weekly Station Override</label>
+                <select id="sched-station-select" class="bg-space-950 border border-white/10 text-white rounded-lg px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="">No Override</option>
+                    <option value="Dine In">Dine In</option>
+                    <option value="CIC">CIC</option>
+                    <option value="DJ">DJ</option>
+                    <option value="Dispatch">Dispatch</option>
+                    <option value="Cashier">Cashier</option>
+                    <option value="SC">SC</option>
+                    <option value="SO">SO</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Assembler">Assembler</option>
+                    <option value="Fryman">Fryman</option>
+                    <option value="Noodles">Noodles</option>
+                    <option value="Backup">Backup</option>
+                    <option value="SS">SS</option>
+                </select>
+            </div>
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="applyQuickTag('RD')" class="py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase rounded-lg hover:bg-blue-500/30">RD</button>
                 <button onclick="applyQuickTag('RRD')" class="py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase rounded-lg hover:bg-blue-500/30">RRD</button>
@@ -702,6 +721,7 @@
     let shiftTemplates = [], weeklySchedules = [], currentSchedDate = new Date();
     let allChatMessages = [], chatChannel = null;
     let currentNote = null, showExcrew = false, medalCountdownStart = null, hiddenSchedDayIndices = new Set();
+    let showSchedulerOrder = true;
     let currentCalDate = new Date(), dtrCalDate = new Date(), currentVaultEmp = null, selectedDTRDate = null;
     let isVaultEditing = false, exportContext = { mode: 'dtr', emp: null };
 
@@ -2130,11 +2150,16 @@
                     <span class="text-[10px] md:text-xs font-black text-white uppercase tracking-wider min-w-[130px] md:min-w-[200px] text-center sched-week-label">Week of ${startOfWeek.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</span>
                     <button onclick="changeSchedWeek(1)" class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-space-950/50 border border-white/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 </div>
-                <div class="flex gap-1 md:gap-2">
-                    ${dayNames.map((name, i) => {
-                        const isHidden = hiddenSchedDayIndices.has(i);
-                        return `<button onclick="toggleSchedDay(${i})" class="sched-day-btn w-8 h-8 md:w-10 md:h-10 rounded-full text-[10px] md:text-xs font-black uppercase transition-all ${isHidden ? 'bg-space-800 text-space-500' : 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'}">${name[0]}</button>`;
-                    }).join('')}
+                <div class="flex items-center gap-2">
+                    <button onclick="window.toggleSchedulerOrder()" class="bg-space-950/50 border border-white/10 text-cyan-400 px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20">
+                        ${showSchedulerOrder ? 'Hide Ranks' : 'Show Ranks'}
+                    </button>
+                    <div class="flex gap-1 md:gap-2">
+                        ${dayNames.map((name, i) => {
+                            const isHidden = hiddenSchedDayIndices.has(i);
+                            return `<button onclick="toggleSchedDay(${i})" class="sched-day-btn w-8 h-8 md:w-10 md:h-10 rounded-full text-[10px] md:text-xs font-black uppercase transition-all ${isHidden ? 'bg-space-800 text-space-500' : 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'}">${name[0]}</button>`;
+                        }).join('')}
+                    </div>
                 </div>
             </div>
             <div class="overflow-x-auto w-full p-1 md:p-6" style="background-color: transparent;">
@@ -2222,7 +2247,9 @@
         }
 
         const grouped = activeEmps.reduce((acc, emp) => {
-            const pos = (emp.scheduler_position || emp.position || "Crew").toLowerCase();
+            const mondayDate = weekDays[0];
+            const weeklyOverride = weeklySchedules.find(s => s.employee_id === emp.employee_no && s.date === mondayDate)?.position;
+            const pos = (weeklyOverride || emp.scheduler_position || emp.position || "Crew").toLowerCase();
             if (!acc[pos]) acc[pos] = [];
             acc[pos].push(emp);
             return acc;
@@ -2263,7 +2290,7 @@
                         unitHtml += `
                             <tr>
                                 <td class="sched-name-cell">
-                                    ${emp.scheduler_order ? emp.scheduler_order + '. ' : ''}${emp.first_name}
+                                    ${showSchedulerOrder ? (emp.scheduler_order ? emp.scheduler_order + '. ' : '0. ') : ''}${emp.first_name}
                                 </td>
                                 ${weekDays.map((date, i) => {
                                     if (hiddenSchedDayIndices.has(i)) return '';
@@ -2302,35 +2329,57 @@
 
     function openSchedEdit(empId, name, date) {
         editingSched = { empId, date };
+        const mondayDate = getStartOfWeek(new Date(date)).toISOString().split('T')[0];
         document.getElementById('sched-edit-title').innerText = `${name} • ${new Date(date).toDateString()}`;
         const existing = weeklySchedules.find(s => s.employee_id === empId && s.date === date);
+        const weeklyPos = weeklySchedules.find(s => s.employee_id === empId && s.date === mondayDate)?.position;
+
         document.getElementById('sched-shift-select').value = existing?.schedule_text || "";
+        document.getElementById('sched-station-select').value = weeklyPos || "";
         document.getElementById('scheduler-edit-modal').classList.remove('hidden');
     }
 
     async function saveScheduleEntry() {
         const shift = document.getElementById('sched-shift-select').value;
-        if(!shift) return alert("Security Protocol: Select shift template first.");
+        const station = document.getElementById('sched-station-select').value;
+        if(!shift && !station) return alert("Security Protocol: Select shift or station first.");
 
         const btn = document.getElementById('btn-save-sched'); btn.innerText = "Syncing..."; btn.disabled = true;
         try {
-            const { error } = await sb.from('employee_schedules').upsert({
-                employee_id: editingSched.empId,
-                date: editingSched.date,
-                schedule_text: shift,
-                tag: null
-            }, { onConflict: 'employee_id,date' });
-            if(error) {
-                console.error("Upsert Error:", error);
-                throw error;
+            const mondayDate = getStartOfWeek(new Date(editingSched.date)).toISOString().split('T')[0];
+
+            // 1. Save shift (Current Date)
+            if (shift) {
+                const { error } = await sb.from('employee_schedules').upsert({
+                    employee_id: editingSched.empId,
+                    date: editingSched.date,
+                    schedule_text: shift,
+                    tag: null
+                }, { onConflict: 'employee_id,date' });
+                if(error) throw error;
             }
+
+            // 2. Save Station Override (Monday of this week)
+            if (station !== undefined) {
+                const { error } = await sb.from('employee_schedules').upsert({
+                    employee_id: editingSched.empId,
+                    date: mondayDate,
+                    position: station || null
+                }, { onConflict: 'employee_id,date' });
+                if(error) throw error;
+            }
+
             closeSchedModal();
 
-            // Refresh local data to show the change immediately
-            const { data } = await sb.from('employee_schedules').select('*').eq('employee_id', editingSched.empId).eq('date', editingSched.date).maybeSingle();
+            // Refresh all schedules for this week to be safe
+            const startStr = getStartOfWeek(new Date(editingSched.date)).toISOString().split('T')[0];
+            const endStr = new Date(new Date(startStr).getTime() + 6 * 86400000).toISOString().split('T')[0];
+
+            const { data } = await sb.from('employee_schedules').select('*').gte('date', startStr).lte('date', endStr);
             if (data) {
-                const idx = weeklySchedules.findIndex(s => s.employee_id === data.employee_id && s.date === data.date);
-                if (idx !== -1) weeklySchedules[idx] = data; else weeklySchedules.push(data);
+                // Remove old local data for this week and insert new
+                weeklySchedules = weeklySchedules.filter(s => s.date < startStr || s.date > endStr);
+                weeklySchedules.push(...data);
             }
             renderMain();
         } catch(e) {
@@ -2384,6 +2433,11 @@
         else hiddenSchedDayIndices.add(index);
         renderMain();
     }
+
+    window.toggleSchedulerOrder = () => {
+        showSchedulerOrder = !showSchedulerOrder;
+        renderMain();
+    };
 
     function renderAttrition(container, dataToRender) {
         if (dataToRender.length === 0) { container.innerHTML = `<div class="p-32 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No crew detachment sequences registered.</div>`; return; }

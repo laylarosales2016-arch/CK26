@@ -66,6 +66,7 @@ fun SchedulerScreen(
     var showHiddenEmployeesDialog by remember { mutableStateOf(false) }
     var showDeleteIcons by remember { mutableStateOf(false) }
     var showPrintButtons by remember { mutableStateOf(false) }
+    var showOrderNumbers by remember { mutableStateOf(true) }
     var editingCell by remember { mutableStateOf<Pair<Employee, LocalDate>?>(null) }
     var editingOrderEmployee by remember { mutableStateOf<Employee?>(null) }
     var employeeToDelete by remember { mutableStateOf<Employee?>(null) }
@@ -191,6 +192,11 @@ fun SchedulerScreen(
                                     onClick = { showHiddenEmployeesDialog = true; showMenu = false },
                                     leadingIcon = { Icon(Icons.Default.Visibility, null) }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text(if (showOrderNumbers) "Hide Rank Numbers" else "Show Rank Numbers") },
+                                    onClick = { showOrderNumbers = !showOrderNumbers; showMenu = false },
+                                    leadingIcon = { Icon(if (showOrderNumbers) Icons.Default.Filter1 else Icons.Default.FormatListNumbered, null) }
+                                )
                             }
                         }
                     }
@@ -307,11 +313,14 @@ fun SchedulerScreen(
                         
                         diningPositions.forEach { pos ->
                             val posEmployees = allEmployees.filter { emp ->
-                                val effectivePos = emp.schedulerPosition ?: emp.position
+                                val mondayDate = weekDates[0].toString()
+                                val weeklyOverride = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }?.position
+                                val effectivePos = weeklyOverride ?: emp.schedulerPosition ?: emp.position
+                                
                                 val isPosMatch = (effectivePos == pos || emp.department == pos)
                                 if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
                                 val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
+                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
                                 isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
                             }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
@@ -340,7 +349,8 @@ fun SchedulerScreen(
                                         },
                                         onEditOrder = { editingOrderEmployee = it },
                                         showDeleteIcon = showDeleteIcons,
-                                        showPrintIcon = showPrintButtons
+                                        showPrintIcon = showPrintButtons,
+                                        showOrderNumber = showOrderNumbers
                                     )
                                     HorizontalDivider(color = Color.Black, thickness = 0.5.dp)
                                 }
@@ -367,11 +377,14 @@ fun SchedulerScreen(
                         
                         kitchenPositions.forEach { pos ->
                             val posEmployees = allEmployees.filter { emp ->
-                                val effectivePos = emp.schedulerPosition ?: emp.position
+                                val mondayDate = weekDates[0].toString()
+                                val weeklyOverride = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }?.position
+                                val effectivePos = weeklyOverride ?: emp.schedulerPosition ?: emp.position
+
                                 val isPosMatch = (effectivePos == pos || emp.department == pos)
                                 if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
                                 val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
+                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
                                 isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
                             }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
@@ -400,7 +413,8 @@ fun SchedulerScreen(
                                         },
                                         onEditOrder = { editingOrderEmployee = it },
                                         showDeleteIcon = showDeleteIcons,
-                                        showPrintIcon = showPrintButtons
+                                        showPrintIcon = showPrintButtons,
+                                        showOrderNumber = showOrderNumbers
                                     )
                                     HorizontalDivider(color = Color.Black, thickness = 0.5.dp)
                                 }
@@ -410,11 +424,14 @@ fun SchedulerScreen(
                         // Section: LEADERSHIP / OTHER
                         val combinedOther = diningPositions + kitchenPositions
                         val otherEmployees = allEmployees.filter { emp ->
-                            val effectivePos = emp.schedulerPosition ?: emp.position
+                            val mondayDate = weekDates[0].toString()
+                            val weeklyOverride = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }?.position
+                            val effectivePos = weeklyOverride ?: emp.schedulerPosition ?: emp.position
+
                             val isOtherPos = effectivePos !in combinedOther && emp.department !in combinedOther
                             if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
                             val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                            val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" }
+                            val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
                             isOtherPos && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
                         }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
 
@@ -449,7 +466,8 @@ fun SchedulerScreen(
                                     },
                                     onEditOrder = { editingOrderEmployee = it },
                                     showDeleteIcon = showDeleteIcons,
-                                    showPrintIcon = showPrintButtons
+                                    showPrintIcon = showPrintButtons,
+                                    showOrderNumber = showOrderNumbers
                                 )
                                 HorizontalDivider(color = Color.Black, thickness = 0.5.dp)
                             }
@@ -462,29 +480,68 @@ fun SchedulerScreen(
 
     if (editingOrderEmployee != null) {
         var newOrder by remember { mutableStateOf(editingOrderEmployee!!.schedulerOrder.toString()) }
+        val mondayDate = weekDates[0].toString()
+        val currentWeeklyPos = allSchedules.find { it.employeeId == editingOrderEmployee!!.id && it.date == mondayDate }?.position
+        var selectedWeeklyPos by remember { mutableStateOf(currentWeeklyPos ?: editingOrderEmployee!!.schedulerPosition ?: editingOrderEmployee!!.position ?: "") }
+        var expandedPos by remember { mutableStateOf(false) }
+
+        val stationPositions = listOf("Dine In", "CIC", "DJ", "Dispatch", "Cashier", "SC", "SO", "Regular", "Assembler", "Fryman", "Noodles", "Backup", "SS")
+
         AlertDialog(
             onDismissRequest = { editingOrderEmployee = null },
-            title = { Text("Change Rank for ${editingOrderEmployee?.firstName}") },
+            title = { Text("Update Node: ${editingOrderEmployee?.firstName}") },
             text = {
-                Column {
-                    Text("Enter a number to decide the order in the station (smaller numbers come first).")
-                    Spacer(Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Rank / Order Number:")
                     OutlinedTextField(
                         value = newOrder,
                         onValueChange = { if (it.all { char -> char.isDigit() }) newOrder = it },
-                        label = { Text("Rank Number") },
+                        label = { Text("Rank") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
+
+                    HorizontalDivider()
+
+                    Text("Weekly Station / Position Override:")
+                    Box {
+                        OutlinedTextField(
+                            value = selectedWeeklyPos,
+                            onValueChange = { selectedWeeklyPos = it },
+                            label = { Text("Station") },
+                            trailingIcon = { IconButton(onClick = { expandedPos = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        DropdownMenu(expanded = expandedPos, onDismissRequest = { expandedPos = false }) {
+                            stationPositions.forEach { pos ->
+                                DropdownMenuItem(
+                                    text = { Text(pos) },
+                                    onClick = {
+                                        selectedWeeklyPos = pos
+                                        expandedPos = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Text("Changes to Station only apply to the week of $mondayDate", fontSize = 11.sp, color = Color.Gray)
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     editingOrderEmployee?.let { emp ->
+                        // 1. Update global rank
                         viewModel.updateEmployee(context, emp.copy(schedulerOrder = newOrder.toIntOrNull() ?: 0))
+                        
+                        // 2. Update weekly position (stored in Monday's schedule record)
+                        val existingMonday = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }
+                        val updatedMonday = existingMonday?.copy(position = selectedWeeklyPos) 
+                            ?: EmployeeSchedule(employeeId = emp.id, date = mondayDate, position = selectedWeeklyPos)
+                        
+                        viewModel.saveSchedule(updatedMonday)
                     }
                     editingOrderEmployee = null
-                }) { Text("Save") }
+                }) { Text("Save Changes") }
             },
             dismissButton = {
                 TextButton(onClick = { editingOrderEmployee = null }) { Text("Cancel") }
@@ -854,7 +911,8 @@ fun EmployeeScheduleRow(
     onExportClick: (Employee) -> Unit,
     onEditOrder: (Employee) -> Unit,
     showDeleteIcon: Boolean,
-    showPrintIcon: Boolean
+    showPrintIcon: Boolean,
+    showOrderNumber: Boolean
 ) {
     val rowColor = employee.schedulerRowColor?.let { Color(it) } ?: Color.White
     val fontColor = employee.schedulerFontColor?.let { Color(it) } ?: Color.Black
@@ -873,7 +931,7 @@ fun EmployeeScheduleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${employee.schedulerOrder}. ${employee.firstName}",
+                text = if (showOrderNumber) "${employee.schedulerOrder}. ${employee.firstName}" else "${employee.firstName}",
                 modifier = Modifier.weight(1f).clickable { onEditOrder(employee) },
                 fontSize = if (isLandscape) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
