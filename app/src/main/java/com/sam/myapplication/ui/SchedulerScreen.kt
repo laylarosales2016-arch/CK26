@@ -91,26 +91,32 @@ fun SchedulerScreen(
                     // 1. Group by positions in order
                     positions.forEach { pos ->
                         val posEmps = allEmployees.filter { emp ->
-                            val effectivePos = emp.schedulerPosition ?: emp.position
+                            val mondayDate = weekDates[0].toString()
+                            val weeklyOverride = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }?.position
+                            val effectivePos = weeklyOverride ?: emp.schedulerPosition ?: emp.position
+                            
                             (effectivePos == pos || emp.department == pos) &&
                             !emp.isHiddenFromScheduler &&
                             allSchedules.none { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" } &&
                             effectivePos?.lowercase() !in excluded &&
                             emp.department?.lowercase() !in excluded
-                        }.sortedBy { it.firstName }
+                        }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
                         orderedEmps.addAll(posEmps)
                     }
                     
                     // 2. Add "Other" employees
                     val otherEmps = allEmployees.filter { emp ->
-                        val effectivePos = emp.schedulerPosition ?: emp.position
+                        val mondayDate = weekDates[0].toString()
+                        val weeklyOverride = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }?.position
+                        val effectivePos = weeklyOverride ?: emp.schedulerPosition ?: emp.position
+
                         effectivePos !in positions && 
                         emp.department !in positions &&
                         !emp.isHiddenFromScheduler &&
                         allSchedules.none { s -> s.employeeId == emp.id && s.date == weekDates[0].toString() && s.tag == "HIDDEN" } &&
                         effectivePos?.lowercase() !in excluded &&
                         emp.department?.lowercase() !in excluded
-                    }.filter { it !in orderedEmps }.sortedBy { it.firstName }
+                    }.filter { it !in orderedEmps }.sortedWith(compareBy({ it.schedulerOrder }, { it.firstName }))
                     
                     orderedEmps.addAll(otherEmps)
 

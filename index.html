@@ -2283,7 +2283,7 @@
                         if ((a.scheduler_order || 0) !== (b.scheduler_order || 0)) {
                             return (a.scheduler_order || 0) - (b.scheduler_order || 0);
                         }
-                        return (a.last_name || "").localeCompare(b.last_name || "");
+                        return (a.first_name || "").localeCompare(b.first_name || "");
                     }).forEach(emp => {
                         const targetId = emp.employee_no;
                         const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
