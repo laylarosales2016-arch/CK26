@@ -50,10 +50,11 @@ class MainActivity : ComponentActivity() {
             UpdateChecker.checkForUpdates(this@MainActivity)
         }
 
-        // Periodic Background Sync every 2 minutes as requested
+        // Periodic Background Sync and Update Check every 2 minutes
         lifecycleScope.launch {
             while(true) {
                 viewModel.performBackgroundSync()
+                UpdateChecker.checkForUpdates(this@MainActivity)
                 kotlinx.coroutines.delay(120_000)
             }
         }
@@ -69,5 +70,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.performBackgroundSync()
+        lifecycleScope.launch {
+            UpdateChecker.checkForUpdates(this@MainActivity)
+        }
     }
 }

@@ -34,7 +34,11 @@ object UpdateChecker {
     // URL to your update_config.json file in your GitHub repository
     private const val UPDATE_JSON_URL = "https://raw.githubusercontent.com/laylarosales2016-arch/CK26/master/update_config.json"
 
+    private var isDialogShowing = false
+
     suspend fun checkForUpdates(activity: Activity) {
+        if (isDialogShowing) return
+
         Log.d(TAG, "Checking for updates at $UPDATE_JSON_URL")
         val updateInfo = fetchUpdateInfo()
         
@@ -94,6 +98,7 @@ object UpdateChecker {
     }
 
     private fun showUpdateDialog(activity: Activity, updateInfo: UpdateInfo) {
+        isDialogShowing = true
         val message = StringBuilder()
         message.append("A new version of Chowking Employee is available.\n\n")
         message.append("Version: ${updateInfo.versionName} (${updateInfo.versionCode})\n")
@@ -108,6 +113,7 @@ object UpdateChecker {
             .setTitle("Update Available")
             .setMessage(message.toString())
             .setPositiveButton("Update Now") { _, _ ->
+                isDialogShowing = false
                 startDownload(activity, updateInfo)
             }
 
@@ -121,7 +127,8 @@ object UpdateChecker {
                 } else false
             }
         } else {
-            builder.setNegativeButton("Later", null)
+            builder.setNegativeButton("Later") { _, _ -> isDialogShowing = false }
+            builder.setOnCancelListener { isDialogShowing = false }
             builder.setCancelable(true)
         }
 
