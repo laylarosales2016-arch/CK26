@@ -1084,7 +1084,6 @@ fun EmployeeListScreen(
     var showIDRenewalManager by rememberSaveable { mutableStateOf(false) }
     var showMallIDList by rememberSaveable { mutableStateOf(false) }
     var showHealthIDRenewalManager by rememberSaveable { mutableStateOf(false) }
-    var showUpdateManager by rememberSaveable { mutableStateOf(false) }
     var showDailySummaryManager by rememberSaveable { mutableStateOf(false) }
     var showMultiScraperDialog by rememberSaveable { mutableStateOf(false) }
     var showBirthdayCelebrantDialog by rememberSaveable { mutableStateOf(false) }
@@ -1265,12 +1264,6 @@ fun EmployeeListScreen(
         )
     }
 
-    if (showUpdateManager) {
-        AppUpdateManagerDialog(
-            viewModel = viewModel,
-            onDismiss = { showUpdateManager = false }
-        )
-    }
 
     val syncProgress by viewModel.syncProgress.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
@@ -1780,16 +1773,6 @@ fun EmployeeListScreen(
                                             },
                                             leadingIcon = { Icon(Icons.Default.Notifications, null) }
                                         )
-                                        if (loggedInEmployee?.isAdmin == true) {
-                                            DropdownMenuItem(
-                                                text = { Text("Update Management") },
-                                                onClick = {
-                                                    showMenu = false
-                                                    showUpdateManager = true
-                                                },
-                                                leadingIcon = { Icon(Icons.Default.Settings, null) }
-                                            )
-                                        }
                                         DropdownMenuItem(
                                             text = { Text(if (showExcrew) "Hide Excrew" else "View Excrew") },
                                             onClick = {
@@ -2282,141 +2265,6 @@ fun EmployeeListScreen(
             }
         }
     }
-}
-
-@Composable
-fun AppUpdateManagerDialog(
-    viewModel: AttendanceViewModel,
-    onDismiss: () -> Unit
-) {
-    var versionCode by remember { mutableStateOf("") }
-    var versionName by remember { mutableStateOf("") }
-    var downloadUrl by remember { mutableStateOf("") }
-    var changes by remember { mutableStateOf("") }
-    var isForceUpdate by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    val currentAppVersionName = remember {
-        try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "Unknown"
-        } catch (e: Exception) { "Unknown" }
-    }
-    val currentAppVersionCode = remember {
-        try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                pInfo.longVersionCode.toInt()
-            } else {
-                @Suppress("DEPRECATION")
-                pInfo.versionCode
-            }
-        } catch (e: Exception) { 0 }
-    }
-
-    LaunchedEffect(Unit) {
-        val config = viewModel.getUpdateConfig()
-        if (config != null) {
-            versionCode = config.versionCode.toString()
-            versionName = config.versionName
-            downloadUrl = config.downloadUrl
-            changes = config.changes ?: ""
-            isForceUpdate = config.isForceUpdate
-        }
-        isLoading = false
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("App Update Management") },
-        text = {
-            if (isLoading) {
-                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text(
-                                "Current App Version:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                "v$currentAppVersionName (Code: $currentAppVersionCode)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = versionCode,
-                        onValueChange = { versionCode = it },
-                        label = { Text("Version Code (Integer)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = versionName,
-                        onValueChange = { versionName = it },
-                        label = { Text("Version Name (e.g. 1.1.0)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = downloadUrl,
-                        onValueChange = { downloadUrl = it },
-                        label = { Text("Download URL (Mediafire)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = changes,
-                        onValueChange = { changes = it },
-                        label = { Text("What's New / Changes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = isForceUpdate, onCheckedChange = { isForceUpdate = it })
-                        Text("Force Update?")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val vCode = versionCode.toIntOrNull() ?: 0
-                    if (vCode > 0 && versionName.isNotBlank() && downloadUrl.isNotBlank()) {
-                        scope.launch {
-                            val success = viewModel.uploadUpdateConfig(
-                                com.sam.myapplication.UpdateInfo(
-                                    versionCode = vCode,
-                                    versionName = versionName,
-                                    downloadUrl = downloadUrl,
-                                    isForceUpdate = isForceUpdate,
-                                    changes = if (changes.isNotBlank()) changes else null
-                                )
-                            )
-                            if (success) onDismiss()
-                        }
-                    }
-                },
-                enabled = !isLoading
-            ) { Text("Save to Supabase") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 @Composable

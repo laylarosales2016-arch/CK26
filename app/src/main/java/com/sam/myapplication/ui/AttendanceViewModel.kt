@@ -414,20 +414,6 @@ class AttendanceViewModel(
 
     // --- GRANULAR SUPABASE DATABASE SYNC (Postgrest) ---
 
-    suspend fun uploadUpdateConfig(config: com.sam.myapplication.UpdateInfo): Boolean {
-        val jsonString = json.encodeToString(config)
-        return supabaseStorage.uploadUpdateConfig(jsonString)
-    }
-
-    suspend fun getUpdateConfig(): com.sam.myapplication.UpdateInfo? {
-        val jsonString = supabaseStorage.getUpdateConfig() ?: return null
-        return try {
-            json.decodeFromString<com.sam.myapplication.UpdateInfo>(jsonString)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     fun syncWithCloudStorage(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {

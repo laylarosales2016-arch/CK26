@@ -244,37 +244,6 @@ class SupabaseStorageSyncManager(
         }
     }
 
-    suspend fun uploadUpdateConfig(jsonContent: String): Boolean {
-        return try {
-            ensureBucketExists()
-            val bytes = jsonContent.toByteArray()
-            // We use a specific bucket/path for updates. Assuming 'backups' or a new 'updates' bucket.
-            // Let's use 'updates' bucket for clarity.
-            val updateBucket = "updates"
-            try { client.storage.getBucket(updateBucket) } catch (e: Exception) { 
-                client.storage.createBucket(updateBucket) { public = true } 
-            }
-            
-            client.storage.from(updateBucket).upload("update_config.json", bytes) { upsert = true }
-            Log.d("SupabaseStorage", "update_config.json uploaded successfully")
-            true
-        } catch (e: Exception) {
-            Log.e("SupabaseStorage", "Failed to upload update config: ${e.message}")
-            false
-        }
-    }
-
-    suspend fun getUpdateConfig(): String? {
-        return try {
-            val updateBucket = "updates"
-            val bytes = client.storage.from(updateBucket).downloadPublic("update_config.json")
-            if (bytes.isNotEmpty()) String(bytes) else null
-        } catch (e: Exception) {
-            Log.e("SupabaseStorage", "Failed to download update config: ${e.message}")
-            null
-        }
-    }
-
     private suspend fun ensureBucketExists() {
         try {
             Log.d("SupabaseStorage", "Checking bucket: $bucketName")
