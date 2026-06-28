@@ -1283,7 +1283,11 @@
             const d = new Date(r.date);
             if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
                 const match = (r.note || "").match(/\((\d+)\s*mins\)/);
-                if (match && parseInt(match[1]) >= 5) gold++; else silver++;
+                if (match) {
+                    if (parseInt(match[1]) >= 5) gold++; else silver++;
+                } else {
+                    gold++; // Default to gold if minutes missing to be strict
+                }
             }
         });
 
@@ -1340,9 +1344,17 @@
             if (rec) {
                 const match = (rec.note || "").match(/\((\d+)\s*mins\)/);
                 const isLateOrOverbreak = rec.status === 'LATE' || rec.status === 'OVERBREAK';
-                const mins = match ? parseInt(match[1]) : 0;
 
-                if (isLateOrOverbreak && mins >= 5) {
+                let isGold = false;
+                if (isLateOrOverbreak) {
+                    if (match) {
+                        if (parseInt(match[1]) >= 5) isGold = true;
+                    } else {
+                        isGold = true; // Default to gold if strict
+                    }
+                }
+
+                if (isLateOrOverbreak && isGold) {
                     statusClass = 'cal-gold';
                     medalIcon = '<i class="fa-solid fa-medal text-amber-400 text-[8px] absolute top-1 right-1 opacity-80"></i>';
                 }
@@ -1996,7 +2008,11 @@
             if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
                 if (!medalMap[r.employee_id]) medalMap[r.employee_id] = { gold: 0, silver: 0 };
                 const match = (r.note || "").match(/\((\d+)\s*mins\)/);
-                if (match && parseInt(match[1]) >= 5) medalMap[r.employee_id].gold++; else medalMap[r.employee_id].silver++;
+                if (match) {
+                    if (parseInt(match[1]) >= 5) medalMap[r.employee_id].gold++; else medalMap[r.employee_id].silver++;
+                } else {
+                    medalMap[r.employee_id].gold++;
+                }
             }
         });
         const excludedPositions = ["assistant manager", "manager", "senior crew", "administrator", "coordinator"];
