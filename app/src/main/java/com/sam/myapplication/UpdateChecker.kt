@@ -17,6 +17,7 @@ import android.util.Log
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -190,6 +191,17 @@ object UpdateChecker {
     private fun installApk(activity: Activity) {
         val file = File(activity.getExternalFilesDir(null), "update.apk")
         if (file.exists()) {
+            // On Android 8.0+, we must have the REQUEST_INSTALL_PACKAGES permission
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!activity.packageManager.canRequestPackageInstalls()) {
+                    activity.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${activity.packageName}")
+                    })
+                    Toast.makeText(activity, "Please enable 'Install unknown apps' and then click update again.", Toast.LENGTH_LONG).show()
+                    return
+                }
+            }
+
             val contentUri = FileProvider.getUriForFile(
                 activity,
                 "${activity.packageName}.fileprovider",
@@ -198,8 +210,15 @@ object UpdateChecker {
             val installIntent = Intent(Intent.ACTION_VIEW)
             installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            installIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             installIntent.setDataAndType(contentUri, "application/vnd.android.package-archive")
-            activity.startActivity(installIntent)
+            
+            try {
+                activity.startActivity(installIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Installation failed", e)
+                Toast.makeText(activity, "Installation failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 }
