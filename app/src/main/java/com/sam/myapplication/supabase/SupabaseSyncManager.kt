@@ -407,6 +407,14 @@ class SupabaseSyncManager(
             repository.clearAllAttendance()
             repository.clearAllDTR()
             repository.clearAllRequests()
+            repository.clearAllDailyNotes()
+            repository.clearAllPermits()
+            repository.clearAllDA()
+            repository.clearAllAttrition()
+            repository.clearAllSchedules()
+            repository.clearAllShiftTemplates()
+            repository.clearActivityLogs()
+            repository.clearAllMessages()
             repository.clearAllEmployees()
             
             remoteEmps.forEach { emp ->
