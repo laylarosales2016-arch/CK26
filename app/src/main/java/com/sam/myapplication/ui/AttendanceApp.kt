@@ -6279,7 +6279,7 @@ fun AddEmployeeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(checked = isResigned, onCheckedChange = { isResigned = it })
-                Text("Resigned")
+                Text("Resigned / Excrew Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
             }
 
             if (isResigned) {
@@ -6306,9 +6306,10 @@ fun AddEmployeeScreen(
                 OutlinedTextField(
                     value = resignationDate,
                     onValueChange = { },
-                    label = { Text("Last Day / Resignation Date") },
+                    label = { Text("Last Day of Duty") },
                     modifier = Modifier.fillMaxWidth().clickable { showResignPicker = true },
                     enabled = false,
+                    supportingText = { Text("Tenure calculation will stop on this date.") },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledTextColor = MaterialTheme.colorScheme.onSurface,
                         disabledBorderColor = MaterialTheme.colorScheme.outline,
@@ -6885,15 +6886,7 @@ fun EditEmployeeScreen(
                     Text("Admin Access", fontWeight = FontWeight.Bold)
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { isResigned = !isResigned }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = isResigned, onCheckedChange = { isResigned = it })
-                    Text("Resigned")
+                    Text("Resigned / Excrew Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 }
 
                 if (isResigned) {
@@ -6920,9 +6913,10 @@ fun EditEmployeeScreen(
                     OutlinedTextField(
                         value = resignationDate,
                         onValueChange = { },
-                        label = { Text("Last Day / Resignation Date") },
+                        label = { Text("Last Day of Duty") },
                         modifier = Modifier.fillMaxWidth().clickable { showResignPicker = true },
                         enabled = false,
+                        supportingText = { Text("Tenure calculation will stop on this date.") },
                         colors = OutlinedTextFieldDefaults.colors(
                             disabledTextColor = MaterialTheme.colorScheme.onSurface,
                             disabledBorderColor = MaterialTheme.colorScheme.outline,
