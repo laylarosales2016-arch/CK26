@@ -2040,7 +2040,7 @@ fun EmployeeListScreen(
                         val daysToExpiry = calculateDaysToExpiry(employee.mallIdExpirationDate)
                         val daysToHealthExpiry = calculateDaysToExpiry(employee.healthIdExpirationDate)
                         val daysToResign = if (employee.isResigned == true && employee.resignationDate != null) calculateDaysToExpiry(employee.resignationDate) else null
-                        val timeHired = calculateTimeHired(employee.dateHired)
+                        val timeHired = calculateTimeHired(employee.dateHired, employee.resignationDate)
                         
                         val totalOffences = (employee.lateOffenceLevel ?: 0) + 
                                 (employee.absentOffenceLevel ?: 0) + 
@@ -4583,7 +4583,7 @@ fun EmployeeDetailScreen(
                     val daysToBirthday = calculateDaysToBirthday(employee?.birthday ?: "")
                     val daysToExpiry = calculateDaysToExpiry(employee?.mallIdExpirationDate ?: "")
                     val daysToResign = if (employee?.isResigned == true && employee.resignationDate != null) calculateDaysToExpiry(employee.resignationDate) else null
-                    val timeHired = calculateTimeHired(employee?.dateHired ?: "")
+                    val timeHired = calculateTimeHired(employee?.dateHired ?: "", employee?.resignationDate)
 
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -5832,6 +5832,14 @@ fun AddEmployeeScreen(
     var payrollAccessCode by remember { mutableStateOf("FISC") }
     var payrollUsername by remember { mutableStateOf("") }
     var payrollPassword by remember { mutableStateOf("") }
+    var position by remember { mutableStateOf("") }
+
+    // Automatically mark as resigned if position is set to Excrew
+    LaunchedEffect(position) {
+        if (position.equals("Excrew", ignoreCase = true)) {
+            isResigned = true
+        }
+    }
 
     // Keep username in sync with employee number
     LaunchedEffect(employeeNo) {
@@ -6440,6 +6448,13 @@ fun EditEmployeeScreen(
         var portalPassword by remember { mutableStateOf(employee.portalPassword ?: "") }
         var position by remember { mutableStateOf(employee.position ?: "") }
         var profileImageUri by remember { mutableStateOf(employee.profileImageUri) }
+
+        // Automatically mark as resigned if position is set to Excrew
+        LaunchedEffect(position) {
+            if (position.equals("Excrew", ignoreCase = true)) {
+                isResigned = true
+            }
+        }
 
         var uniformCap by remember { mutableStateOf(employee.uniformCap?.toString() ?: "0") }
         var uniformApron by remember { mutableStateOf(employee.uniformApron?.toString() ?: "0") }
@@ -7076,12 +7091,13 @@ fun calculateDaysToExpiry(expiryStr: String?): Long? {
     }
 }
 
-fun calculateTimeHired(hiredDateStr: String?): String? {
+fun calculateTimeHired(hiredDateStr: String?, resignationDateStr: String? = null): String? {
     if (hiredDateStr == null) return null
     return try {
-        val today = LocalDate.now()
         val hiredDate = parseDate(hiredDateStr) ?: return null
-        val period = java.time.Period.between(hiredDate, today)
+        val endDate = resignationDateStr?.let { parseDate(it) } ?: LocalDate.now()
+        
+        val period = java.time.Period.between(hiredDate, endDate)
         
         val years = period.years
         val months = period.months

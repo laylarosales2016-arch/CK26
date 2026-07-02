@@ -766,6 +766,18 @@
                 <div><label class="info-label">Date Hired</label><input type="date" id="edit-hired" value="${currentVaultEmp.date_hired || ''}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
                 <div><label class="info-label">Birthday</label><input type="date" id="edit-birthday" value="${currentVaultEmp.birthday || ''}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
                 <div><label class="info-label">Residential Hub</label><input type="text" id="edit-location" value="${currentVaultEmp.location || ''}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
+
+                <div class="mt-4 p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="edit-resigned" ${currentVaultEmp.is_resigned ? 'checked' : ''} class="w-4 h-4 accent-rose-500">
+                        <label for="edit-resigned" class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Mark as Resigned / Excrew</label>
+                    </div>
+                    <div>
+                        <label class="info-label">Last Day of Duty</label>
+                        <input type="date" id="edit-resigned-date" value="${currentVaultEmp.resignation_date || ''}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full">
+                    </div>
+                </div>
+
                 <div class="flex items-center gap-2 mt-4">
                     <input type="checkbox" id="edit-hidden" ${currentVaultEmp.is_hidden_from_scheduler ? 'checked' : ''} class="w-4 h-4 accent-cyan-500">
                     <label for="edit-hidden" class="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Hide from Scheduler</label>
@@ -808,12 +820,16 @@
         const saveBtn = document.getElementById('v-save-vault-btn');
         saveBtn.innerText = "Saving..."; saveBtn.disabled = true;
 
+        let pos = document.getElementById('edit-position').value;
+        let isRes = document.getElementById('edit-resigned').checked;
+        if (pos.toLowerCase() === 'excrew') isRes = true;
+
         const updatedData = {
             employee_no: currentVaultEmp.employee_no,
             first_name: document.getElementById('edit-fn').value,
             middle_name: document.getElementById('edit-mn').value,
             last_name: document.getElementById('edit-ln').value,
-            position: document.getElementById('edit-position').value,
+            position: pos,
             email: document.getElementById('edit-email').value,
             phone_number: document.getElementById('edit-phone').value,
             marital_status: document.getElementById('edit-marital').value,
@@ -821,6 +837,8 @@
             birthday: document.getElementById('edit-birthday').value,
             location: document.getElementById('edit-location').value,
             is_hidden_from_scheduler: document.getElementById('edit-hidden').checked,
+            is_resigned: isRes,
+            resignation_date: document.getElementById('edit-resigned-date').value,
             sss: document.getElementById('edit-sss').value,
             tin_number: document.getElementById('edit-tin').value,
             phil_health: document.getElementById('edit-ph').value,
@@ -1247,7 +1265,9 @@
         document.getElementById('v-location').innerText = emp.location || '---';
 
         if (emp.date_hired) {
-            const hired = new Date(emp.date_hired), diff = new Date() - hired;
+            const hired = new Date(emp.date_hired);
+            const endDate = emp.is_resigned && emp.resignation_date ? new Date(emp.resignation_date) : new Date();
+            const diff = endDate - hired;
             const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365)), months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
             document.getElementById('v-tenure').innerText = `${years}y ${months}m`;
         }
@@ -2101,7 +2121,14 @@
         allAttendance.forEach(r => { const d = new Date(r.date); if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) { if (!medalMap[r.employee_id]) medalMap[r.employee_id] = { gold: 0, silver: 0 }; const match = (r.note || "").match(/\((\d+)\s*mins\)/); if (match && parseInt(match[1]) >= 5) medalMap[r.employee_id].gold++; else medalMap[r.employee_id].silver++; } });
         let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[1400px]"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-10 py-5 table-header-text">Personnel Core Identity</th><th class="px-10 py-5 table-header-text">Deployment Timeline</th><th class="px-10 py-5 table-header-text">Government System Registries</th><th class="px-10 py-5 table-header-text">Financial Ledger Vault</th><th class="px-10 py-5 table-header-text">Uniform Allocation Units</th><th class="px-10 py-5 table-header-text">Emergency Anchor Contact</th></tr></thead><tbody class="divide-y divide-white/5">`;
         dataToRender.forEach(emp => {
-            let tenure = "---"; if (emp.date_hired) { const hired = new Date(emp.date_hired), diff = new Date() - hired, y = Math.floor(diff / 86400000 / 365), m = Math.floor((diff / 86400000 % 365) / 30); tenure = `${y > 0 ? y + 'y ' : ''}${m}m`; }
+            let tenure = "---";
+            if (emp.date_hired) {
+                const hired = new Date(emp.date_hired);
+                const endDate = emp.is_resigned && emp.resignation_date ? new Date(emp.resignation_date) : new Date();
+                const diff = endDate - hired;
+                const y = Math.floor(diff / 86400000 / 365), m = Math.floor((diff / 86400000 % 365) / 30);
+                tenure = `${y > 0 ? y + 'y ' : ''}${m}m`;
+            }
             const m = medalMap[emp.employee_no] || { gold: 0, silver: 0 }; let icons = ''; for(let i=0; i<m.gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-[10px] shadow-[0_0_8px_rgba(251,191,36,0.4)]"></i>'; for(let i=0; i<m.silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-[10px] shadow-[0_0_8px_rgba(148,163,184,0.4)]"></i>';
 
             const displayPos = emp.scheduler_position || emp.position;
