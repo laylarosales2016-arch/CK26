@@ -5833,6 +5833,9 @@ fun AddEmployeeScreen(
     var payrollUsername by remember { mutableStateOf("") }
     var payrollPassword by remember { mutableStateOf("") }
     var position by remember { mutableStateOf("") }
+    var profileImageUri by remember { mutableStateOf<String?>(null) }
+    var isResigned by remember { mutableStateOf(false) }
+    var resignationDate by remember { mutableStateOf("") }
 
     // Automatically mark as resigned if position is set to Excrew
     LaunchedEffect(position) {
@@ -5845,8 +5848,6 @@ fun AddEmployeeScreen(
     LaunchedEffect(employeeNo) {
         payrollUsername = employeeNo
     }
-    var position by remember { mutableStateOf("") }
-    var profileImageUri by remember { mutableStateOf<String?>(null) }
     
     var uniformCap by remember { mutableStateOf("0") }
     var uniformApron by remember { mutableStateOf("0") }
@@ -5855,8 +5856,6 @@ fun AddEmployeeScreen(
     var isCertified by remember { mutableStateOf(false) }
     var certifiedPositions by remember { mutableStateOf(emptyList<String>()) }
     var isAdmin by remember { mutableStateOf(false) }
-    var isResigned by remember { mutableStateOf(false) }
-    var resignationDate by remember { mutableStateOf("") }
     var maritalStatus by remember { mutableStateOf("") }
     var emergencyContactName by remember { mutableStateOf("") }
     var emergencyContactRelationship by remember { mutableStateOf("") }
@@ -6449,6 +6448,8 @@ fun EditEmployeeScreen(
         var portalPassword by remember { mutableStateOf(employee.portalPassword ?: "") }
         var position by remember { mutableStateOf(employee.position ?: "") }
         var profileImageUri by remember { mutableStateOf(employee.profileImageUri) }
+        var isResigned by remember { mutableStateOf(employee.isResigned == true) }
+        var resignationDate by remember { mutableStateOf(employee.resignationDate ?: "") }
 
         // Automatically mark as resigned if position is set to Excrew
         LaunchedEffect(position) {
@@ -6464,8 +6465,6 @@ fun EditEmployeeScreen(
         var isCertified by remember { mutableStateOf(employee.isCertified == true) }
         var certifiedPositions by remember { mutableStateOf(employee.certifiedPositions ?: emptyList<String>()) }
         var isAdmin by remember { mutableStateOf(employee.isAdmin == true) }
-        var isResigned by remember { mutableStateOf(employee.isResigned == true) }
-        var resignationDate by remember { mutableStateOf(employee.resignationDate ?: "") }
         var maritalStatus by remember { mutableStateOf(employee.maritalStatus ?: "") }
         var emergencyContactName by remember { mutableStateOf(employee.emergencyContactName ?: "") }
         var emergencyContactRelationship by remember { mutableStateOf(employee.emergencyContactRelationship ?: "") }
@@ -6886,6 +6885,14 @@ fun EditEmployeeScreen(
                     Text("Admin Access", fontWeight = FontWeight.Bold)
                 }
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isResigned = !isResigned }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = isResigned, onCheckedChange = { isResigned = it })
                     Text("Resigned / Excrew Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 }
 
