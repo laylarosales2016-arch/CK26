@@ -567,23 +567,62 @@ fun SchedulerScreen(
     }
 
     if (showHiddenEmployeesDialog) {
-        val hiddenEmployees = allEmployees.filter { it.isHiddenFromScheduler && it.position?.lowercase() != "excrew" }
+        val mondayDate = weekDates[0].toString()
+        val globallyHidden = allEmployees.filter { it.isHiddenFromScheduler && it.position?.lowercase() != "excrew" }
+        
+        // Find employees who are hidden ONLY for this specific week (via the HIDDEN tag)
+        val weeklyHidden = allEmployees.filter { emp ->
+            !emp.isHiddenFromScheduler && 
+            allSchedules.any { it.employeeId == emp.id && it.date == mondayDate && it.tag == "HIDDEN" }
+        }
+
         AlertDialog(
             onDismissRequest = { showHiddenEmployeesDialog = false },
             title = { Text("Restore Hidden Employees") },
             text = {
-                if (hiddenEmployees.isEmpty()) {
-                    Text("No hidden employees.")
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        items(hiddenEmployees) { emp ->
+                Column(modifier = Modifier.heightIn(max = 400.dp)) {
+                    if (globallyHidden.isEmpty() && weeklyHidden.isEmpty()) {
+                        Text("No hidden employees found.")
+                    }
+
+                    if (weeklyHidden.isNotEmpty()) {
+                        Text("HIDDEN THIS WEEK", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        weeklyHidden.forEach { emp ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("${emp.firstName}")
-                                Button(onClick = { viewModel.toggleEmployeeSchedulerVisibility(context, emp) }) {
+                                Text("${emp.firstName}", style = MaterialTheme.typography.bodyMedium)
+                                Button(
+                                    onClick = { 
+                                        val hiddenRecord = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate && it.tag == "HIDDEN" }
+                                        hiddenRecord?.let { viewModel.deleteSchedule(it) }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Restore")
+                                }
+                            }
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    }
+
+                    if (globallyHidden.isNotEmpty()) {
+                        Text("GLOBALLY HIDDEN", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        globallyHidden.forEach { emp ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("${emp.firstName}", style = MaterialTheme.typography.bodyMedium)
+                                Button(
+                                    onClick = { viewModel.toggleEmployeeSchedulerVisibility(context, emp) },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
                                     Text("Restore")
                                 }
                             }
