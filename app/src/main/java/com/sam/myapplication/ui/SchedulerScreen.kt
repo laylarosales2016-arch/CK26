@@ -66,7 +66,7 @@ fun SchedulerScreen(
     var showHiddenEmployeesDialog by remember { mutableStateOf(false) }
     var showDeleteIcons by remember { mutableStateOf(false) }
     var showPrintButtons by remember { mutableStateOf(false) }
-    var showOrderNumbers by remember { mutableStateOf(true) }
+    var showOrderNumbers by remember { mutableStateOf(false) }
     var editingCell by remember { mutableStateOf<Pair<Employee, LocalDate>?>(null) }
     var editingOrderEmployee by remember { mutableStateOf<Employee?>(null) }
     var employeeToDelete by remember { mutableStateOf<Employee?>(null) }
@@ -199,7 +199,7 @@ fun SchedulerScreen(
                                     leadingIcon = { Icon(Icons.Default.Visibility, null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (showOrderNumbers) "Hide Rank Numbers" else "Show Rank Numbers") },
+                                    text = { Text(if (showOrderNumbers) "Hide Rank" else "Show Rank") },
                                     onClick = { showOrderNumbers = !showOrderNumbers; showMenu = false },
                                     leadingIcon = { Icon(if (showOrderNumbers) Icons.Default.Filter1 else Icons.Default.FormatListNumbered, null) }
                                 )
