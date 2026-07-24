@@ -83,7 +83,7 @@ fun SchedulerScreen(
         onResult = { uri ->
             uri?.let {
                 context.contentResolver.openOutputStream(it)?.let { outputStream ->
-                    val excluded = listOf("manager", "administrator", "excrew", "assistant manager")
+                    val excluded = listOf("manager", "administrator", "excrew", "senior crew", "assistant manager")
                     val positions = listOf("Dine In", "SS", "CIC", "DJ", "Dispatch", "Cashier", "SO", "Regular", "Assembler", "Fryman", "Noodles", "Backup", "SC")
                     
                     val orderedEmps = mutableListOf<Employee>()

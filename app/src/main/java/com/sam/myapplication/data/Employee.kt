@@ -65,7 +65,16 @@ data class Employee(
     @SerialName("scheduler_position") val schedulerPosition: String? = null,
     @SerialName("scheduler_row_color") val schedulerRowColor: Int? = null,
     @SerialName("scheduler_font_color") val schedulerFontColor: Int? = null,
-    @SerialName("scheduler_order") val schedulerOrder: Int = 0
+    @SerialName("scheduler_order") val schedulerOrder: Int = 0,
+    @SerialName("performance_score") val performanceScore: Double? = null,
+    @SerialName("performance_comments") val performanceComments: String? = null,
+    @SerialName("rating1") val rating1: Int? = 0,
+    @SerialName("rating2") val rating2: Int? = 0,
+    @SerialName("rating3") val rating3: Int? = 0,
+    @SerialName("rating4") val rating4: Int? = 0,
+    @SerialName("rating5") val rating5: Int? = 0,
+    @SerialName("appraisal_month") val appraisalMonth: String? = "",
+    @SerialName("appraisal_qtr") val appraisalQtr: Int? = null
 )
 
 @Serializable

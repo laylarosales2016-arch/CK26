@@ -89,6 +89,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.AssignmentInd
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.ManageSearch
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
@@ -100,6 +101,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -1090,6 +1092,8 @@ fun EmployeeListScreen(
     var showAttritionManager by rememberSaveable { mutableStateOf(false) }
     var showDAManager by rememberSaveable { mutableStateOf(false) }
     var showMedalCountdownDialog by rememberSaveable { mutableStateOf(false) }
+    var showAppraisalDialog by rememberSaveable { mutableStateOf(false) }
+    var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
     var imageRefreshKey by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     // Pre-calculate medals for the list
@@ -1154,6 +1158,37 @@ fun EmployeeListScreen(
         expiringIDs.size + expiringHealthIDs.size + birthdaysToday.size + 
         allRequests.count { it.status == com.sam.myapplication.data.RequestStatus.PENDING } + 
         resigningSoon.size + unreadTotal
+    }
+
+    if (showAppraisalDialog) {
+        PerformanceAppraisalPicker(
+            employees = employees,
+            onEmployeeSelected = { emp ->
+                targetAppraisalEmployee = emp
+                // Form dialog will show since targetAppraisalEmployee is now not null
+            },
+            onDismiss = { showAppraisalDialog = false }
+        )
+    }
+
+    if (targetAppraisalEmployee != null) {
+        PerformanceAppraisalDialog(
+            employee = targetAppraisalEmployee!!,
+            onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
+                viewModel.updateEmployee(context, targetAppraisalEmployee!!.copy(
+                    performanceScore = score, 
+                    performanceComments = comment,
+                    rating1 = r1,
+                    rating2 = r2,
+                    rating3 = r3,
+                    rating4 = r4,
+                    rating5 = r5,
+                    appraisalMonth = mon,
+                    appraisalQtr = qtr
+                ))
+            },
+            onDismiss = { targetAppraisalEmployee = null }
+        )
     }
 
     if (showDownloadWarning) {
@@ -1714,7 +1749,7 @@ fun EmployeeListScreen(
                                             trailingIcon = { Icon(Icons.Default.ChevronRight, null) }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Employee RTW & Attrition", fontWeight = FontWeight.Bold) },
+                                            text = { Text("Employee RTW & Attrition & PA", fontWeight = FontWeight.Bold) },
                                             onClick = { menuCategory = "rtw_attrition" },
                                             leadingIcon = { Icon(Icons.Default.PersonOff, null) },
                                             trailingIcon = { Icon(Icons.Default.ChevronRight, null) }
@@ -1938,7 +1973,7 @@ fun EmployeeListScreen(
                                         }
                                     }
                                     "rtw_attrition" -> {
-                                        // EMPLOYEE RTW & ATTRITION SUB-MENU
+                                        // EMPLOYEE RTW & ATTRITION & PA SUB-MENU
                                         DropdownMenuItem(
                                             text = { Text("Back to Main Menu", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) },
                                             onClick = { menuCategory = null },
@@ -1959,6 +1994,14 @@ fun EmployeeListScreen(
                                                 showAttritionManager = true
                                             },
                                             leadingIcon = { Icon(Icons.Default.PersonOff, null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Performance Appraisal") },
+                                            onClick = {
+                                                showMenu = false
+                                                showAppraisalDialog = true
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.Assignment, null) }
                                         )
                                         if (loggedInEmployee?.isAdmin == true) {
                                             DropdownMenuItem(
@@ -3652,6 +3695,7 @@ fun EmployeeDetailScreen(
     onOpenChatList: () -> Unit,
     onBack: () -> Unit
 ) {
+    val localContext = LocalContext.current
     val employees by viewModel.allEmployees.collectAsState()
     val employee = employees.find { it.id == employeeId }
     val attendanceRecords by viewModel.getAttendanceForEmployee(employeeId).collectAsState(initial = emptyList())
@@ -3673,8 +3717,42 @@ fun EmployeeDetailScreen(
     var isEditMode by remember { mutableStateOf(false) }
     var showDownloadWarning by remember { mutableStateOf(false) }
     var downloadAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var showAppraisalDialog by rememberSaveable { mutableStateOf(false) }
+    var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
     var imageRefreshKey by remember { mutableLongStateOf(0L) }
     
+    if (showAppraisalDialog) {
+        PerformanceAppraisalPicker(
+            employees = employees,
+            onEmployeeSelected = { emp ->
+                targetAppraisalEmployee = emp
+                // Form dialog will show since targetAppraisalEmployee is now not null
+            },
+            onDismiss = { showAppraisalDialog = false }
+        )
+    }
+
+    if (targetAppraisalEmployee != null) {
+        PerformanceAppraisalDialog(
+            employee = targetAppraisalEmployee!!,
+            readOnly = loggedInEmployee?.isAdmin != true,
+            onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
+                viewModel.updateEmployee(localContext, targetAppraisalEmployee!!.copy(
+                    performanceScore = score, 
+                    performanceComments = comment,
+                    rating1 = r1,
+                    rating2 = r2,
+                    rating3 = r3,
+                    rating4 = r4,
+                    rating5 = r5,
+                    appraisalMonth = mon,
+                    appraisalQtr = qtr
+                ))
+            },
+            onDismiss = { targetAppraisalEmployee = null }
+        )
+    }
+
     if (showDownloadWarning) {
         AlertDialog(
             onDismissRequest = { showDownloadWarning = false },
@@ -3793,13 +3871,12 @@ fun EmployeeDetailScreen(
             }
         )
     }
-    val context = LocalContext.current
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             uri?.let {
-                viewModel.uploadProfileImage(employeeId, context.contentResolver, it) { success ->
+                viewModel.uploadProfileImage(employeeId, localContext.contentResolver, it) { success ->
                     if (success) imageRefreshKey = System.currentTimeMillis()
                     scope.launch {
                         snackbarHostState.showSnackbar(
@@ -3853,7 +3930,7 @@ fun EmployeeDetailScreen(
             employee = employee,
             onDismiss = { showDADialog = false },
             onConfirm = { updatedEmployee ->
-                viewModel.updateEmployee(context, updatedEmployee)
+                viewModel.updateEmployee(localContext, updatedEmployee)
                 showDADialog = false
                 scope.launch { snackbarHostState.showSnackbar("Disciplinary actions updated") }
             }
@@ -4021,7 +4098,7 @@ fun EmployeeDetailScreen(
                                     "Resign Date" -> employee.copy(resignationDate = selectedDate, isResigned = true)
                                     else -> employee
                                 }
-                                viewModel.updateEmployee(context, updated)
+                                viewModel.updateEmployee(localContext, updated)
                             } else {
                                 viewModel.submitRequest(com.sam.myapplication.data.AttendanceRequest(
                                     employeeId = employeeId,
@@ -4081,11 +4158,11 @@ fun EmployeeDetailScreen(
                                 "Payroll Pass" -> employee.copy(payrollPassword = editingValue)
                                 else -> employee
                             }
-                            viewModel.updateEmployee(context, updated)
+                            viewModel.updateEmployee(localContext, updated)
                         } else {
                             if (editingField == "Payroll Pass") {
                                 val updated = employee.copy(payrollPassword = editingValue)
-                                viewModel.updateEmployee(context, updated)
+                                viewModel.updateEmployee(localContext, updated)
                             } else {
                                 viewModel.submitRequest(com.sam.myapplication.data.AttendanceRequest(
                                     employeeId = employeeId,
@@ -4225,6 +4302,14 @@ fun EmployeeDetailScreen(
                             onDismissRequest = { showDetailMenu = false }
                         ) {
                             DropdownMenuItem(
+                                text = { Text("Performance Appraisal") },
+                                onClick = {
+                                    showDetailMenu = false
+                                    targetAppraisalEmployee = employee
+                                },
+                                leadingIcon = { Icon(Icons.Default.Assignment, null) }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Daily Time Record (DTR)") },
                                 onClick = {
                                     showDetailMenu = false
@@ -4239,6 +4324,14 @@ fun EmployeeDetailScreen(
                                     showChangePasswordDialog = true
                                 },
                                 leadingIcon = { Icon(Icons.Default.Edit, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Performance Appraisal") },
+                                onClick = {
+                                    showDetailMenu = false
+                                    targetAppraisalEmployee = employee
+                                },
+                                leadingIcon = { Icon(Icons.Default.Assignment, null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Logout") },
@@ -4302,7 +4395,7 @@ fun EmployeeDetailScreen(
                                 border = androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    val model = rememberProfileImageModel(employee, context, imageRefreshKey)
+                                    val model = rememberProfileImageModel(employee, localContext, imageRefreshKey)
                                     if (model != null) {
                                         AsyncImage(
                                             model = model,
@@ -4402,10 +4495,14 @@ fun EmployeeDetailScreen(
 
                 if (loggedInEmployee?.id == (employee?.id ?: -1)) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
+                        if (loggedInEmployee?.id == (employee?.id ?: -1)) {
+                            Button(
                                 onClick = {
                                     downloadAction = {
                                         employee?.let {
@@ -4419,26 +4516,27 @@ fun EmployeeDetailScreen(
                                     }
                                     showDownloadWarning = true
                                 },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Sync, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(2.dp))
-                            Text("Retrieve", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                modifier = Modifier.height(48.dp),
+                                shape = MaterialTheme.shapes.medium,
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                            ) {
+                                Icon(Icons.Default.Sync, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Retrieve", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            }
                         }
 
                         if (loggedInEmployee?.id == employeeId || loggedInEmployee?.isAdmin == true) {
                             Button(
                                 onClick = { onPayslip(employeeId) },
-                                modifier = Modifier.weight(1f).height(48.dp),
+                                modifier = Modifier.height(48.dp),
                                 shape = MaterialTheme.shapes.medium,
-                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                             ) {
                                 Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(2.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text("Payslip", style = MaterialTheme.typography.labelSmall, maxLines = 1)
                             }
                         }
@@ -4446,25 +4544,25 @@ fun EmployeeDetailScreen(
                         if (loggedInEmployee?.isAdmin == false) {
                             Button(
                                 onClick = { showRequestDialog = true },
-                                modifier = Modifier.weight(1f).height(48.dp),
+                                modifier = Modifier.height(48.dp),
                                 shape = MaterialTheme.shapes.medium,
-                                contentPadding = PaddingValues(horizontal = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 12.dp)
                             ) {
                                 Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(2.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text("Request", style = MaterialTheme.typography.labelSmall, maxLines = 1)
                             }
                         }
                         
                         OutlinedButton(
                             onClick = { isEditMode = !isEditMode },
-                            modifier = Modifier.weight(1f).height(48.dp),
+                            modifier = Modifier.height(48.dp),
                             shape = MaterialTheme.shapes.medium,
-                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp),
                             colors = if (isEditMode) ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else ButtonDefaults.outlinedButtonColors()
                         ) {
                             Icon(if (isEditMode) Icons.Default.Close else Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(2.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(if (isEditMode) "Done" else "Profile", style = MaterialTheme.typography.labelSmall, maxLines = 1)
                         }
                     }
@@ -4624,6 +4722,15 @@ fun EmployeeDetailScreen(
                                 value = "$daysToHealthExpiry Days",
                                 icon = Icons.Default.HealthAndSafety,
                                 containerColor = color.copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (employee.performanceScore != null) {
+                            StatusCard(
+                                label = "Perf. Score",
+                                value = String.format("%.1f", employee.performanceScore),
+                                icon = Icons.Default.Star,
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -7229,6 +7336,36 @@ fun PermitWebViewScreen(
     var showExpiredList by remember { mutableStateOf(false) }
     
     val permits by viewModel.allWorkPermits.collectAsState(initial = emptyList())
+    var showAppraisalPicker by remember { mutableStateOf(false) }
+    var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
+    val employees by viewModel.allEmployees.collectAsState()
+    
+    if (showAppraisalPicker) {
+        PerformanceAppraisalPicker(
+            employees = employees,
+            onEmployeeSelected = { emp -> targetAppraisalEmployee = emp },
+            onDismiss = { showAppraisalPicker = false }
+        )
+    }
+    if (targetAppraisalEmployee != null) {
+        PerformanceAppraisalDialog(
+            employee = targetAppraisalEmployee!!,
+            onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
+                viewModel.updateEmployee(context, targetAppraisalEmployee!!.copy(
+                    performanceScore = score, 
+                    performanceComments = comment,
+                    rating1 = r1,
+                    rating2 = r2,
+                    rating3 = r3,
+                    rating4 = r4,
+                    rating5 = r5,
+                    appraisalMonth = mon,
+                    appraisalQtr = qtr
+                ))
+            },
+            onDismiss = { targetAppraisalEmployee = null }
+        )
+    }
     
     val permitUrl = "https://oma.smphi.com/TP_WorkPermit/"
     val standardUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -7672,6 +7809,18 @@ fun PermitWebViewScreen(
                             }
                         }
                     }
+                    
+                    Spacer(Modifier.weight(1f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    NavigationDrawerItem(
+                        label = { Text("Performance Appraisal") },
+                        selected = false,
+                        onClick = { 
+                            scope.launch { drawerState.close() }
+                            showAppraisalPicker = true 
+                        },
+                        icon = { Icon(Icons.Default.Assignment, null) }
+                    )
                 }
             }
         }
@@ -7865,7 +8014,7 @@ fun PermitWebViewScreen(
                             isFocusableInTouchMode = true
                             isClickable = true
 
-                                settings.apply {
+                            settings.apply {
                                     javaScriptEnabled = true
                                     domStorageEnabled = true
                                     databaseEnabled = true
@@ -9102,6 +9251,282 @@ fun getProfilePicUrl(empNo: String): String {
     if (empNo.isBlank()) return "https://ui-avatars.com/api/?name=User&background=0b0f19&color=22d3ee"
     val safeEmpNo = empNo.trim().replace("/", "_").replace("#", "_").replace(" ", "_")
     return "https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/public/backups/$safeEmpNo/$safeEmpNo.jpg"
+}
+
+@Composable
+fun PerformanceAppraisalPicker(
+    employees: List<Employee>,
+    onEmployeeSelected: (Employee) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val excludedPositions = listOf("Manager", "Senior Crew", "Excrew", "Assistant Manager", "Administrator")
+    val filtered = remember(employees, searchQuery) {
+        employees.filter { 
+            (it.firstName?.contains(searchQuery, ignoreCase = true) == true || 
+             it.lastName?.contains(searchQuery, ignoreCase = true) == true) &&
+            !excludedPositions.any { pos -> it.position?.equals(pos, ignoreCase = true) == true }
+        }.sortedBy { it.firstName }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Performance Appraisal") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Employee") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    items(filtered) { emp ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onEmployeeSelected(emp); onDismiss() }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("${emp.firstName} ${emp.lastName}", fontWeight = FontWeight.Bold)
+                                Text(emp.position ?: "No Position", fontSize = 11.sp, color = Color.Gray)
+                            }
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+fun PerformanceAppraisalDialog(
+    employee: Employee,
+    readOnly: Boolean = false,
+    onSave: (Double, String, Int, Int, Int, Int, Int, String, Int?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var month by remember { mutableStateOf(employee.appraisalMonth ?: "") }
+    var monthExpanded by remember { mutableStateOf(false) }
+    val months = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+    
+    var qtr by remember { mutableStateOf<Int?>(employee.appraisalQtr) }
+    var rating1 by remember { mutableIntStateOf(employee.rating1 ?: 0) }
+    var rating2 by remember { mutableIntStateOf(employee.rating2 ?: 0) }
+    var rating3 by remember { mutableIntStateOf(employee.rating3 ?: 0) }
+    var rating4 by remember { mutableIntStateOf(employee.rating4 ?: 0) }
+    var rating5 by remember { mutableIntStateOf(employee.rating5 ?: 0) }
+    var comments by remember { mutableStateOf(employee.performanceComments ?: "") }
+
+    val score = (rating1 + rating2 + rating3 + rating4 + rating5)
+    val averageScore = if (score > 0) score / 5.0 else 0.0
+
+    // Autosave Effect
+    LaunchedEffect(rating1, rating2, rating3, rating4, rating5, comments, month, qtr) {
+        if (!readOnly && (rating1 > 0 || rating2 > 0 || rating3 > 0 || rating4 > 0 || rating5 > 0 || comments.isNotBlank() || month.isNotBlank() || qtr != null)) {
+            onSave(averageScore, comments, rating1, rating2, rating3, rating4, rating5, month, qtr)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .fillMaxWidth(0.95f)
+            .padding(vertical = 24.dp),
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("FUSION", fontWeight = FontWeight.Black, fontSize = 22.sp, color = Color.White)
+                Text("Integrated Service Cooperative", fontSize = 10.sp, color = Color.LightGray)
+                Spacer(Modifier.height(16.dp))
+                Text("PERFORMANCE APPRAISAL FORM", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color.White)
+            }
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Name: ${employee.firstName} ${employee.lastName}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Date Hired: ${employee.dateHired ?: "--"}", fontSize = 12.sp, color = Color.LightGray)
+                        Text("Position: ${employee.schedulerPosition ?: employee.position ?: "--"}", fontSize = 12.sp, color = Color.LightGray)
+                    }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        Text("Store: Chowking SM Clark", fontSize = 12.sp, color = Color.LightGray)
+                    }
+                }
+                
+                Spacer(Modifier.height(20.dp))
+                Text("Appraisal Period:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = month,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Month", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = Color.White),
+                            trailingIcon = {
+                                if (!readOnly) {
+                                    IconButton(onClick = { monthExpanded = true }) {
+                                        Icon(Icons.Default.MoreVert, null, tint = Color.White)
+                                    }
+                                }
+                            }
+                        )
+                        if (!readOnly) {
+                            DropdownMenu(expanded = monthExpanded, onDismissRequest = { monthExpanded = false }) {
+                                months.forEach { m ->
+                                    DropdownMenuItem(
+                                        text = { Text(m) },
+                                        onClick = { month = m; monthExpanded = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer(Modifier.width(8.dp))
+                    
+                    Column(modifier = Modifier.weight(1.8f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            (1..2).forEach { i ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
+                                    RadioButton(
+                                        selected = qtr == i, 
+                                        onClick = { if (!readOnly) qtr = i }, 
+                                        modifier = Modifier.size(32.dp), 
+                                        enabled = !readOnly,
+                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80))
+                                    )
+                                    Text("${i}${if(i==1) "st" else "nd"} QTR", fontSize = 9.sp, color = Color.LightGray)
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            (3..4).forEach { i ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
+                                    RadioButton(
+                                        selected = qtr == i, 
+                                        onClick = { if (!readOnly) qtr = i }, 
+                                        modifier = Modifier.size(32.dp), 
+                                        enabled = !readOnly,
+                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80))
+                                    )
+                                    Text("${i}${if(i==3) "rd" else "th"} QTR", fontSize = 9.sp, color = Color.LightGray)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    color = Color.DarkGray.copy(alpha = 0.8f), 
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                        Text("Rating Scale: 3-BEST (Exceeds), 2-PASSED (Meets), 1-FAILED (Below)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                AppraisalFactorItem("I. JOB KNOWLEDGE", "(STATION CERTIFICATION, CROSS TRAINING, 4 STEPS)", rating1, readOnly) { rating1 = it }
+                AppraisalFactorItem("II. QUALITY OF WORK", "(GOLD STANDARD SERVICES, HIGH QUALITY & CONSISTENT)", rating2, readOnly) { rating2 = it }
+                AppraisalFactorItem("III. TEAMWORK", "(TEAM PLAYER, DEPENDABLE, RESPONSIBLE & RESPECTFUL)", rating3, readOnly) { rating3 = it }
+                AppraisalFactorItem("IV. ATTENDANCE & PUNCTUALITY", "(HABITUAL TARDINESS, LEAVES & NOTIFICATION)", rating4, readOnly) { rating4 = it }
+                AppraisalFactorItem("V. PERSONAL HEALTH HYGIENE & GROOMING", "(UNIFORM STANDARDS, CLEANLINESS & GROOMING)", rating5, readOnly) { rating5 = it }
+
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    Text("SCORE: ", fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text(
+                        String.format("%.1f", averageScore), 
+                        fontSize = 28.sp, 
+                        fontWeight = FontWeight.Black, 
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                        color = if (averageScore >= 2.0) Color.Green else Color(0xFFFF8A80)
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = comments,
+                    onValueChange = { if (!readOnly) comments = it },
+                    label = { Text("Rater's Overall Comments", color = Color.LightGray) },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    readOnly = readOnly,
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White)
+                )
+            }
+        },
+        containerColor = Color(0xFF2D2D3A),
+        confirmButton = {
+            if (!readOnly) {
+                Button(
+                    onClick = {
+                        onSave(averageScore, comments, rating1, rating2, rating3, rating4, rating5, month, qtr)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A80)),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) { 
+                    Text("Save Appraisal", fontWeight = FontWeight.Bold, color = Color.Black) 
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = if (readOnly) Modifier.fillMaxWidth() else Modifier
+            ) { 
+                Text(
+                    if (readOnly) "Close Form" else "Cancel", 
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun AppraisalFactorItem(title: String, subtitle: String, currentRating: Int, readOnly: Boolean = false, onRatingSelected: (Int) -> Unit) {
+    Column(Modifier.padding(vertical = 12.dp)) {
+        Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = Color.White)
+        if (subtitle.isNotEmpty()) Text(subtitle, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            (1..3).forEach { r ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentRating == r, 
+                        onClick = { if (!readOnly) onRatingSelected(r) }, 
+                        enabled = !readOnly,
+                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80), unselectedColor = Color.Gray)
+                    )
+                    Text("$r", fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
 }
 
 

@@ -164,6 +164,17 @@ class SupabaseSyncManager(
                 // Handle list serialization explicitly
                 put("custom_offences", json.encodeToJsonElement(emp.customOffences ?: emptyList<CustomOffence>()))
                 put("certified_positions", json.encodeToJsonElement(emp.certifiedPositions ?: emptyList<String>()))
+            
+                // PERFORMANCE APPRAISAL FIELDS
+                put("performance_score", if (emp.performanceScore != null) JsonPrimitive(emp.performanceScore) else JsonNull)
+                put("performance_comments", if (emp.performanceComments != null) JsonPrimitive(emp.performanceComments) else JsonNull)
+                put("rating1", JsonPrimitive(emp.rating1 ?: 0))
+                put("rating2", JsonPrimitive(emp.rating2 ?: 0))
+                put("rating3", JsonPrimitive(emp.rating3 ?: 0))
+                put("rating4", JsonPrimitive(emp.rating4 ?: 0))
+                put("rating5", JsonPrimitive(emp.rating5 ?: 0))
+                put("appraisal_month", if (emp.appraisalMonth != null) JsonPrimitive(emp.appraisalMonth) else JsonNull)
+                put("appraisal_qtr", if (emp.appraisalQtr != null) JsonPrimitive(emp.appraisalQtr) else JsonNull)
 
                 // We keep the employee_no as the primary link. 
                 // Removing 'id' allows Supabase to use its own PK if configured,
