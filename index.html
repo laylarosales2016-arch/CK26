@@ -269,6 +269,10 @@
                 <i class="fa-solid fa-clock text-base"></i>
                 <span class="text-center leading-tight">DTR Terminal</span>
             </button>
+            <button id="v-perf-btn" onclick="openAppraisalHistory()" class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500/20 transition-all flex flex-col items-center justify-center gap-2 h-20 w-full lg:w-36 shadow-lg shadow-emerald-500/5">
+                <i class="fa-solid fa-star text-base"></i>
+                <span class="text-center leading-tight">Performance Appraisal</span>
+            </button>
             <button onclick="openExportModal('sched')" class="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-amber-500/20 transition-all flex flex-col items-center justify-center gap-2 h-20 w-full lg:w-36 shadow-lg shadow-amber-500/5">
                 <i class="fa-solid fa-calendar-check text-base"></i>
                 <span class="text-center leading-tight">Schedule Export</span>
@@ -660,7 +664,337 @@
     </div>
 </div>
 
+<div id="appraisal-history-modal" class="fixed inset-0 z-[155] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-emerald-500/20 shadow-2xl bg-[#1a1c23]">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <div>
+                <h3 id="app-hist-title" class="text-sm font-black text-white uppercase tracking-widest">Appraisal History</h3>
+                <p id="app-hist-subtitle" class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Personnel Records</p>
+            </div>
+            <button onclick="closeAppraisalHistory()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+            <button id="btn-new-appraisal" onclick="startNewAppraisal()" class="hidden w-full py-4 bg-emerald-500 text-space-950 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 mb-4">
+                <i class="fa-solid fa-plus mr-2"></i>New Performance Appraisal
+            </button>
+            <div id="app-history-list" class="space-y-3">
+                <!-- History items here -->
+            </div>
+            <div id="app-followup-note" class="hidden p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 mt-4">
+                <p class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Follow-up Required</p>
+                <p id="followup-text" class="text-[11px] text-slate-300 italic leading-relaxed"></p>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/40 border-t border-white/5 text-center">
+            <button onclick="closeAppraisalHistory()" class="text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Close Archive</button>
+        </div>
+    </div>
+</div>
+
+<div id="appraisal-form-modal" class="fixed inset-0 z-[160] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-rose-500/20 shadow-2xl bg-[#2D2D3A]">
+        <div class="p-8 text-center border-b border-white/5 relative">
+            <button onclick="closeAppraisalForm()" class="absolute left-6 top-1/2 -translate-y-1/2 text-space-400 hover:text-white"><i class="fa-solid fa-chevron-left text-xl"></i></button>
+            <h2 class="text-2xl font-black text-white tracking-tight">FUSION</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Integrated Service Cooperative</p>
+            <h3 class="mt-4 text-lg font-black text-white uppercase tracking-wider">Performance Appraisal Form</h3>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div>
+                    <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-1">Personnel</span>
+                    <p id="app-form-name" class="text-sm font-bold text-white">---</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-1">Location</span>
+                    <p class="text-sm font-bold text-white">Chowking SM Clark</p>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-1">Date Hired</span>
+                    <p id="app-form-hired" class="text-sm font-bold text-white">---</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-1">Position</span>
+                    <p id="app-form-pos" class="text-sm font-bold text-white">---</p>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-4">Appraisal Period</h4>
+                <div class="flex flex-col sm:flex-row gap-4 items-center">
+                    <div class="relative w-full flex-1">
+                        <select id="app-input-month" class="bg-space-950/80 border border-white/10 text-white rounded-xl px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-rose-500 appearance-none font-bold">
+                            <option value="">Select Month...</option>
+                            <option value="January">January</option><option value="February">February</option><option value="March">March</option>
+                            <option value="April">April</option><option value="May">May</option><option value="June">June</option>
+                            <option value="July">July</option><option value="August">August</option><option value="September">September</option>
+                            <option value="October">October</option><option value="November">November</option><option value="December">December</option>
+                        </select>
+                        <i class="fa-solid fa-calendar-days text-rose-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+                    <div class="flex gap-3 bg-space-950/50 p-2 rounded-xl border border-white/10" id="app-form-qtr-container">
+                        <!-- Quarters -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/80 p-3 rounded-lg text-center mb-8 border border-white/5">
+                <p class="text-[10px] font-black text-white uppercase tracking-wider">Rating Scale: 3-BEST (Exceeds), 2-PASSED (Meets), 1-FAILED (Below)</p>
+            </div>
+
+            <div class="space-y-10" id="app-form-factors">
+                <!-- Factors I to V -->
+            </div>
+
+            <div class="mt-12 flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/5">
+                <span class="text-lg font-black text-white tracking-widest uppercase">Average Score:</span>
+                <p id="app-form-score" class="text-4xl font-black text-rose-400 underline underline-offset-8">0.0</p>
+            </div>
+
+            <div class="mt-8">
+                <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-2">Rater's Overall Comments</span>
+                <textarea id="app-input-comments" class="bg-space-950/50 p-4 rounded-xl border border-white/5 italic text-slate-100 text-sm leading-relaxed min-h-[120px] w-full outline-none focus:ring-1 focus:ring-rose-500 shadow-inner" placeholder="Enter evaluator feedback..."></textarea>
+                <div id="app-view-comments" class="hidden bg-space-950/50 p-4 rounded-xl border border-white/5 italic text-slate-300 text-sm leading-relaxed min-h-[100px]"></div>
+            </div>
+        </div>
+
+        <div class="p-8 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button id="btn-save-appraisal" onclick="saveAppraisalRecord()" class="hidden flex-1 py-4 bg-rose-500 hover:bg-rose-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-rose-500/10">Commit Appraisal</button>
+            <button onclick="closeAppraisalForm()" id="btn-close-app-form" class="flex-1 py-4 text-white text-[11px] font-black uppercase tracking-widest hover:text-rose-400 transition-colors">Close Form</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    let currentAppraisals = [], editingAppraisal = null, appRatings = [0,0,0,0,0], appQtr = 1;
+
+    async function openAppraisalHistory() {
+        if (!currentVaultEmp) return;
+        const emp = currentVaultEmp;
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+
+        document.getElementById('app-hist-subtitle').innerText = `${emp.first_name} ${emp.last_name}`;
+        const newList = document.getElementById('app-history-list');
+        newList.innerHTML = '<div class="p-8 text-center"><div class="loader w-8 h-8 border-2 rounded-full mx-auto"></div></div>';
+
+        document.getElementById('app-followup-note').classList.add('hidden');
+        document.getElementById('btn-new-appraisal').classList.toggle('hidden', !isAdmin);
+
+        document.getElementById('appraisal-history-modal').classList.remove('hidden');
+
+        try {
+            const { data, error } = await sb.from('appraisal_records').select('*').eq('employeeId', emp.id || emp.employee_no).order('createdAt', { ascending: false });
+            if (error) throw error;
+            currentAppraisals = data || [];
+
+            if (currentAppraisals.length === 0) {
+                newList.innerHTML = '<p class="text-center py-8 text-space-400 text-xs font-bold uppercase tracking-widest opacity-50">No historical records found.</p>';
+            } else {
+                newList.innerHTML = currentAppraisals.map(r => {
+                    const isFailed = r.score < 2.0;
+                    return `
+                    <div onclick="openAppraisalForm(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="bg-space-950/40 border ${isFailed ? 'border-rose-500/30 bg-rose-500/5' : 'border-white/5'} p-4 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/5 transition-all group">
+                        <div>
+                            <p class="text-xs font-bold text-white">${r.month} ${r.year} - Q${r.quarter}</p>
+                            <p class="text-[9px] font-black ${isFailed ? 'text-rose-400' : 'text-emerald-400'} uppercase tracking-widest mt-1">Score: ${r.score.toFixed(1)} / 3.0</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-space-500 group-hover:text-white transition-colors"></i>
+                    </div>`;
+                }).join('');
+
+                // Follow-up Logic
+                const lastFailed = currentAppraisals.find(r => r.score < 2.0);
+                if (lastFailed) {
+                    const followUps = currentAppraisals.filter(r => r.createdAt > lastFailed.createdAt);
+                    if (followUps.length < 3) {
+                        document.getElementById('app-followup-note').classList.remove('hidden');
+                        document.getElementById('followup-text').innerText = `Subject failed appraisal on ${lastFailed.month} ${lastFailed.year}. Required: ${3 - followUps.length} more monthly evaluation(s).`;
+                    }
+                }
+            }
+        } catch (err) {
+            newList.innerHTML = `<p class="text-center py-8 text-rose-400 text-[10px] font-bold">Error: ${err.message}</p>`;
+        }
+    }
+
+    function closeAppraisalHistory() { document.getElementById('appraisal-history-modal').classList.add('hidden'); }
+
+    function startNewAppraisal() {
+        const emp = currentVaultEmp;
+        const newRec = {
+            id: null,
+            employeeId: emp.id || emp.employee_no,
+            score: 0.0,
+            comments: "",
+            rating1: 0, rating2: 0, rating3: 0, rating4: 0, rating5: 0,
+            month: "",
+            quarter: 1,
+            year: new Date().getFullYear()
+        };
+        openAppraisalForm(newRec, false);
+    }
+
+    function openAppraisalForm(record, isViewOnly = null) {
+        if (!currentVaultEmp) return;
+        const emp = currentVaultEmp;
+        editingAppraisal = record;
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+        const readOnly = isViewOnly !== null ? isViewOnly : !isAdmin;
+
+        document.getElementById('app-form-name').innerText = `${emp.first_name} ${emp.last_name}`;
+        document.getElementById('app-form-hired').innerText = emp.date_hired || '---';
+        document.getElementById('app-form-pos').innerText = emp.scheduler_position || emp.position || '---';
+
+        // Inputs vs View
+        const monthInput = document.getElementById('app-input-month');
+        monthInput.value = record.month || "";
+        monthInput.disabled = readOnly;
+
+        const commInput = document.getElementById('app-input-comments');
+        const commView = document.getElementById('app-view-comments');
+        if (readOnly) {
+            commInput.classList.add('hidden');
+            commView.classList.remove('hidden');
+            commView.innerText = record.comments || 'No rater remarks provided.';
+        } else {
+            commInput.classList.remove('hidden');
+            commView.classList.add('hidden');
+            commInput.value = record.comments || "";
+        }
+
+        appRatings = [record.rating1, record.rating2, record.rating3, record.rating4, record.rating5];
+        appQtr = record.quarter || 1;
+
+        updateFormDisplay(readOnly);
+        document.getElementById('btn-save-appraisal').classList.toggle('hidden', readOnly);
+        document.getElementById('btn-close-app-form').innerText = readOnly ? "Close Form" : "Cancel";
+
+        document.getElementById('appraisal-form-modal').classList.remove('hidden');
+    }
+
+    function updateFormDisplay(readOnly) {
+        // Quarters
+        const qtrCont = document.getElementById('app-form-qtr-container');
+        qtrCont.innerHTML = [1,2,3,4].map(q => `
+            <div onclick="${readOnly ? '' : `setAppQtr(${q})`}" class="flex items-center gap-2 ${readOnly ? '' : 'cursor-pointer'}">
+                <div class="w-5 h-5 rounded-full border-2 ${appQtr == q ? 'border-rose-400 bg-rose-400' : 'border-slate-600'} flex items-center justify-center transition-all">
+                    ${appQtr == q ? '<i class="fa-solid fa-check text-[10px] text-space-950"></i>' : ''}
+                </div>
+                <span class="text-[9px] font-black ${appQtr == q ? 'text-white' : 'text-slate-500'} uppercase">${q}${q==1?'st':q==2?'nd':q==3?'rd':'th'}</span>
+            </div>
+        `).join('');
+
+        // Factors
+        const factors = [
+            { t: 'I. JOB KNOWLEDGE', s: '(STATION CERTIFICATION, CROSS TRAINING, 4 STEPS)' },
+            { t: 'II. QUALITY OF WORK', s: '(GOLD STANDARD SERVICES, HIGH QUALITY & CONSISTENT)' },
+            { t: 'III. TEAMWORK', s: '(TEAM PLAYER, DEPENDABLE, RESPONSIBLE & RESPECTFUL)' },
+            { t: 'IV. ATTENDANCE & PUNCTUALITY', s: '(HABITUAL TARDINESS, LEAVES & NOTIFICATION)' },
+            { t: 'V. PERSONAL HEALTH HYGIENE & GROOMING', s: '(UNIFORM STANDARDS, CLEANLINESS & GROOMING)' }
+        ];
+
+        const factorsCont = document.getElementById('app-form-factors');
+        factorsCont.innerHTML = factors.map((f, i) => `
+            <div>
+                <h5 class="text-xs font-black text-white uppercase tracking-wider mb-1">${f.t}</h5>
+                <p class="text-[9px] text-slate-500 font-bold uppercase mb-4">${f.s}</p>
+                <div class="flex justify-between sm:justify-start sm:gap-12">
+                    ${[1,2,3].map(r => `
+                        <div onclick="${readOnly ? '' : `setAppRating(${i}, ${r})`}" class="flex items-center gap-3 ${readOnly ? '' : 'cursor-pointer group'}">
+                            <div class="w-7 h-7 rounded-full border-2 ${appRatings[i] == r ? 'border-rose-400 bg-rose-400' : 'border-slate-700'} flex items-center justify-center transition-all ${!readOnly ? 'group-hover:border-rose-400/50' : ''}">
+                                ${appRatings[i] == r ? '<i class="fa-solid fa-check text-xs text-space-950"></i>' : ''}
+                            </div>
+                            <span class="text-sm font-black ${appRatings[i] == r ? 'text-white' : 'text-slate-600'} group-hover:text-slate-300 transition-colors">${r}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+
+        const total = appRatings.reduce((a,b) => a+b, 0);
+        const avg = total > 0 ? total / 5.0 : 0.0;
+        document.getElementById('app-form-score').innerText = avg.toFixed(1);
+    }
+
+    function setAppQtr(q) { appQtr = q; updateFormDisplay(false); }
+    function setAppRating(idx, val) { appRatings[idx] = val; updateFormDisplay(false); }
+
+    async function saveAppraisalRecord() {
+        if (!editingAppraisal) return;
+        const month = document.getElementById('app-input-month').value;
+        const comments = document.getElementById('app-input-comments').value;
+
+        if (!month) return alert("Security Protocol: Appraisal month is mandatory.");
+        if (appRatings.some(r => r === 0)) return alert("Security Protocol: All performance factors must be evaluated.");
+
+        const total = appRatings.reduce((a,b) => a+b, 0);
+        const avg = total / 5.0;
+
+        const btn = document.getElementById('btn-save-appraisal');
+        btn.innerText = "Encrypting..."; btn.disabled = true;
+
+        // Generate a unique ID if this is a new record
+        const recordId = editingAppraisal.id || 'app_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        const payload = {
+            id: recordId,
+            employeeId: editingAppraisal.employeeId,
+            score: avg,
+            comments: comments,
+            rating1: appRatings[0],
+            rating2: appRatings[1],
+            rating3: appRatings[2],
+            rating4: appRatings[3],
+            rating5: appRatings[4],
+            month: month,
+            quarter: appQtr,
+            year: editingAppraisal.year,
+            createdAt: editingAppraisal.id ? editingAppraisal.createdAt : Date.now()
+        };
+
+        try {
+            const { error } = await sb.from('appraisal_records').upsert(payload);
+            if (error) throw error;
+
+            // Also update the main employee profile with LATEST appraisal data
+            // (We keep this for backward compatibility and quick views)
+            await sb.from('employees').update({
+                performance_score: avg,
+                performance_comments: comments,
+                rating1: appRatings[0],
+                rating2: appRatings[1],
+                rating3: appRatings[2],
+                rating4: appRatings[3],
+                rating5: appRatings[4],
+                appraisal_month: month,
+                appraisal_qtr: appQtr
+            }).eq('employee_no', currentVaultEmp.employee_no);
+
+            // Update local state
+            const empIdx = employees.findIndex(e => e.employee_no === currentVaultEmp.employee_no);
+            if (empIdx !== -1) {
+                employees[empIdx].performance_score = avg;
+                employees[empIdx].performance_comments = comments;
+                // ... update other fields if needed
+            }
+
+            alert("Transmission Successful: Appraisal data committed to core.");
+            closeAppraisalForm();
+            openAppraisalHistory(); // Refresh history
+            renderMain(); // Refresh lists
+        } catch (err) {
+            alert("Uplink Error: " + err.message);
+        } finally {
+            btn.innerText = "Commit Appraisal"; btn.disabled = false;
+        }
+    }
+
+    function closeAppraisalForm() { document.getElementById('appraisal-form-modal').classList.add('hidden'); }
+    function closeAppraisalForm() { document.getElementById('appraisal-form-modal').classList.add('hidden'); }
+
     window.printReadout = () => {
         const content = document.getElementById('readout-content').innerHTML;
         const title = document.getElementById('readout-title').innerText;
@@ -721,7 +1055,7 @@
     let shiftTemplates = [], weeklySchedules = [], currentSchedDate = new Date();
     let allChatMessages = [], chatChannel = null;
     let currentNote = null, showExcrew = false, medalCountdownStart = null, hiddenSchedDayIndices = new Set();
-    let showSchedulerOrder = true;
+    let showSchedulerOrder = false;
     let currentCalDate = new Date(), dtrCalDate = new Date(), currentVaultEmp = null, selectedDTRDate = null;
     let isVaultEditing = false, exportContext = { mode: 'dtr', emp: null };
 
@@ -1282,6 +1616,42 @@
         document.getElementById('v-apron').innerText = emp.uniform_apron || 0;
         document.getElementById('v-shirt').innerText = emp.uniform_shirt || 0;
         document.getElementById('v-pants').innerText = emp.uniform_pants || 0;
+
+        // Performance Appraisal
+        const score = emp.performance_score;
+        const comments = emp.performance_comments;
+        const appraisalCard = document.getElementById('v-appraisal-card');
+        const appraisalBtn = document.getElementById('v-perf-btn');
+
+        if (score !== null && score !== undefined) {
+            appraisalCard.classList.remove('hidden');
+            appraisalBtn.classList.remove('hidden');
+            document.getElementById('v-perf-score').innerText = score.toFixed(1);
+            document.getElementById('v-perf-comments').innerText = comments || 'Performance assessment established. Keep up the momentum!';
+
+            const month = emp.appraisal_month || 'Current';
+            const qtr = emp.appraisal_qtr ? `${emp.appraisal_qtr}${emp.appraisal_qtr === 1 ? 'st' : emp.appraisal_qtr === 2 ? 'nd' : emp.appraisal_qtr === 3 ? 'rd' : 'th'} QTR` : '';
+            document.getElementById('v-perf-period').innerText = `${month} ${qtr}`.trim();
+
+            // Optional: Mini ratings indicators
+            const ratings = [emp.rating1, emp.rating2, emp.rating3, emp.rating4, emp.rating5];
+            if (ratings.some(r => r > 0)) {
+                let ratingsHtml = '<div class="flex gap-1 mt-3 justify-center">';
+                ratings.forEach((r, i) => {
+                    if (r === undefined || r === null) {
+                         ratingsHtml += `<div class="h-1 w-full rounded-full bg-white/5" title="Factor ${i+1}: N/A"></div>`;
+                         return;
+                    }
+                    const colors = ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500'];
+                    ratingsHtml += `<div class="h-1 w-full rounded-full ${r > 0 ? colors[r-1] : 'bg-white/5'}" title="Factor ${i+1}: ${r}/3"></div>`;
+                });
+                ratingsHtml += '</div>';
+                document.getElementById('v-perf-comments').innerHTML += ratingsHtml;
+            }
+        } else {
+            appraisalCard.classList.add('hidden');
+            appraisalBtn.classList.add('hidden');
+        }
 
         const certEl = document.getElementById('v-cert');
         if (emp.is_certified) { certEl.innerText = "Crew Certified"; certEl.className = "px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest text-center"; }
@@ -2131,13 +2501,15 @@
             }
             const m = medalMap[emp.employee_no] || { gold: 0, silver: 0 }; let icons = ''; for(let i=0; i<m.gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-[10px] shadow-[0_0_8px_rgba(251,191,36,0.4)]"></i>'; for(let i=0; i<m.silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-[10px] shadow-[0_0_8px_rgba(148,163,184,0.4)]"></i>';
 
+            const perfScore = emp.performance_score ? `<div class="mt-2 flex items-center gap-2"><span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Perf: ${emp.performance_score.toFixed(1)}</span><div class="h-1 w-12 bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: ${(emp.performance_score/3)*100}%"></div></div></div>` : '';
+
             const displayPos = emp.scheduler_position || emp.position;
             const myId = sessionStorage.getItem('portal_id');
             const msgIcon = (myId && myId !== emp.employee_no) || portalRole === 'admin' || portalRole === 'superadmin'
                 ? `<button onclick="openPrivateChat('${emp.employee_no}')" class="ml-2 text-cyan-400 hover:text-cyan-300 transition-colors" title="Send Message"><i class="fa-solid fa-comment-dots"></i></button>`
                 : '';
 
-            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-5"><div class="flex items-start gap-4"><div class="min-w-[120px] pt-1"><span class="glass-badge badge-cyan">${displayPos}</span></div><div class="w-12 h-12 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-sm tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div><p class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">EMP ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-1">${icons}</div>${portalRole === 'superadmin' ? `<div class="mt-4 p-3 bg-space-950/50 border border-white/5 rounded-xl"><label class="info-label !text-[7px]">Vault Key</label><div class="flex gap-2"><input type="text" id="pass-${emp.employee_no}" value="${emp.portal_password || ''}" class="bg-space-950 border border-white/10 text-cyan-400 rounded px-2 py-1 text-[10px] font-mono w-24 outline-none"><button onclick="adminUpdatePass('${emp.employee_no}')" class="bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded text-[8px] font-black uppercase">Set</button></div></div>` : ''}<p class="text-[11px] text-space-400 mt-1 opacity-70">${emp.email || ''}</p><p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Status: <span class="text-slate-300 font-medium normal-case">${emp.marital_status || '--'}</span></p></div></div></td><td class="px-10 py-5"><p class="text-[11px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[11px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p><p class="text-[10px] text-space-400 mt-1.5 uppercase font-bold tracking-wider">BORN: <span class="text-slate-300 font-normal normal-case">${formatDate(emp.birthday) || '--'}</span></p><p class="text-[10px] text-space-500 mt-1 uppercase font-bold">LOCATION: <span class="text-slate-300 font-normal normal-case whitespace-pre-line">${emp.location || '--'}</span></p></td><td class="px-10 py-5 min-w-[220px]"><div class="space-y-2 font-mono text-[11px] text-slate-300"><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-3 whitespace-nowrap">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-3 whitespace-nowrap">${emp.tin_number || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PH</span><span class="ml-3 whitespace-nowrap">${emp.phil_health || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PAG</span><span class="ml-3 whitespace-nowrap">${emp.pagibig || '--'}</span></div></div></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-xs text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-10 py-5"><div class="flex flex-wrap gap-1 mb-2 max-w-[240px]"><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Cap: ${emp.uniform_cap || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Apron: ${emp.uniform_apron || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Shirt: ${emp.uniform_shirt || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Pants: ${emp.uniform_pants || 0}</span></div><span class="glass-badge badge-emerald inline-block mt-0.5">${emp.is_certified ? 'Crew Certified' : 'Uncertified'}</span></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-space-500 font-bold uppercase tracking-wider mt-0.5">${emp.emergency_contact_relationship || ''}</p><p class="text-xs text-cyan-400 font-mono mt-1 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-10 py-5"><div class="flex items-start gap-4"><div class="min-w-[120px] pt-1"><span class="glass-badge badge-cyan">${displayPos}</span></div><div class="w-12 h-12 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-sm tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div><p class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">EMP ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-1">${icons}</div>${perfScore}${portalRole === 'superadmin' ? `<div class="mt-4 p-3 bg-space-950/50 border border-white/5 rounded-xl"><label class="info-label !text-[7px]">Vault Key</label><div class="flex gap-2"><input type="text" id="pass-${emp.employee_no}" value="${emp.portal_password || ''}" class="bg-space-950 border border-white/10 text-cyan-400 rounded px-2 py-1 text-[10px] font-mono w-24 outline-none"><button onclick="adminUpdatePass('${emp.employee_no}')" class="bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded text-[8px] font-black uppercase">Set</button></div></div>` : ''}<p class="text-[11px] text-space-400 mt-1 opacity-70">${emp.email || ''}</p><p class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Status: <span class="text-slate-300 font-medium normal-case">${emp.marital_status || '--'}</span></p></div></div></td><td class="px-10 py-5"><p class="text-[11px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[11px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p><p class="text-[10px] text-space-400 mt-1.5 uppercase font-bold tracking-wider">BORN: <span class="text-slate-300 font-normal normal-case">${formatDate(emp.birthday) || '--'}</span></p><p class="text-[10px] text-space-500 mt-1 uppercase font-bold">LOCATION: <span class="text-slate-300 font-normal normal-case whitespace-pre-line">${emp.location || '--'}</span></p></td><td class="px-10 py-5 min-w-[220px]"><div class="space-y-2 font-mono text-[11px] text-slate-300"><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-3 whitespace-nowrap">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-3 whitespace-nowrap">${emp.tin_number || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PH</span><span class="ml-3 whitespace-nowrap">${emp.phil_health || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[9px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PAG</span><span class="ml-3 whitespace-nowrap">${emp.pagibig || '--'}</span></div></div></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-xs text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-10 py-5"><div class="flex flex-wrap gap-1 mb-2 max-w-[240px]"><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Cap: ${emp.uniform_cap || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Apron: ${emp.uniform_apron || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Shirt: ${emp.uniform_shirt || 0}</span><span class="text-[9px] bg-space-950 text-space-400 px-2 py-0.5 rounded border border-white/5">Pants: ${emp.uniform_pants || 0}</span></div><span class="glass-badge badge-emerald inline-block mt-0.5">${emp.is_certified ? 'Crew Certified' : 'Uncertified'}</span></td><td class="px-10 py-5"><p class="text-xs font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-space-500 font-bold uppercase tracking-wider mt-0.5">${emp.emergency_contact_relationship || ''}</p><p class="text-xs text-cyan-400 font-mono mt-1 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
         });
         container.innerHTML = html + `</tbody></table></div>`;
     }
@@ -2195,7 +2567,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="window.toggleSchedulerOrder()" class="bg-space-950/50 border border-white/10 text-cyan-400 px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20">
-                        ${showSchedulerOrder ? 'Hide Ranks' : 'Show Ranks'}
+                        ${showSchedulerOrder ? 'Hide Rank' : 'Show Rank'}
                     </button>
                     <div class="flex gap-1 md:gap-2">
                         ${dayNames.map((name, i) => {
