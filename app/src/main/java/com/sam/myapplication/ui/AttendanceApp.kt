@@ -4485,7 +4485,7 @@ fun EmployeeDetailScreen(
                                         Text(
                                             text = "REGULAR",
                                             modifier = Modifier
-                                                .background(goldGlitter.copy(alpha = 0.1f))
+                                                .background(brush = goldGlitter, alpha = 0.1f)
                                                 .padding(horizontal = 8.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 brush = goldGlitter,
