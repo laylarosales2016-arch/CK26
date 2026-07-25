@@ -4459,6 +4459,42 @@ fun EmployeeDetailScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.SemiBold
                                 )
+
+                                // Regular Badge Logic (6 months tenure)
+                                val dateHired = remember(employee.dateHired) { 
+                                    try { LocalDate.parse(employee.dateHired) } catch(e: Exception) { null } 
+                                }
+                                val isRegular = remember(dateHired) {
+                                    if (dateHired == null) false
+                                    else {
+                                        val sixMonthsAgo = LocalDate.now().minusMonths(6)
+                                        dateHired.isBefore(sixMonthsAgo) || dateHired.isEqual(sixMonthsAgo)
+                                    }
+                                }
+
+                                if (isRegular && employee.position != "Excrew") {
+                                    val goldGlitter = Brush.linearGradient(
+                                        colors = listOf(Color(0xFFFFD700), Color(0xFFFFFACD), Color(0xFFFFD700), Color(0xFFDAA520), Color(0xFFFFD700))
+                                    )
+                                    Surface(
+                                        modifier = Modifier.padding(top = 4.dp).shadow(2.dp, RoundedCornerShape(4.dp)),
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color.Transparent,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, goldGlitter)
+                                    ) {
+                                        Text(
+                                            text = "REGULAR",
+                                            modifier = Modifier
+                                                .background(goldGlitter.copy(alpha = 0.1f))
+                                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                brush = goldGlitter,
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 2.sp
+                                            )
+                                        )
+                                    }
+                                }
                                 
                                 Spacer(Modifier.height(8.dp))
                                 
@@ -9326,7 +9362,7 @@ fun PerformanceAppraisalHistoryDialog(
     onDismiss: () -> Unit,
     onViewAppraisal: (AppraisalRecord) -> Unit
 ) {
-    val appraisals by viewModel.getAppraisalsForEmployee(employee.id).collectAsState(initial = emptyList())
+    val appraisals by viewModel.getAppraisalsForEmployee(employee.employeeNo ?: employee.id).collectAsState(initial = emptyList())
     val loggedInEmployee by viewModel.loggedInEmployee.collectAsState()
 
     AlertDialog(
@@ -9338,7 +9374,7 @@ fun PerformanceAppraisalHistoryDialog(
                     Button(
                         onClick = {
                             val newRecord = AppraisalRecord(
-                                employeeId = employee.id,
+                                employeeId = employee.employeeNo ?: employee.id,
                                 score = 0.0,
                                 comments = "",
                                 rating1 = 0,
@@ -9357,6 +9393,20 @@ fun PerformanceAppraisalHistoryDialog(
                         Icon(Icons.Default.Add, null)
                         Spacer(Modifier.width(8.dp))
                         Text("New Appraisal")
+                    }
+                }
+
+                // Appraisal Guidance
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Column(Modifier.padding(10.dp)) {
+                        Text("Appraisal Cycle Protocol:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("• Probationary: Month 1, Month 3, Month 6", style = MaterialTheme.typography.labelSmall)
+                        Text("• Regular: Every 6 months thereafter", style = MaterialTheme.typography.labelSmall)
+                        Text("• Failing (Score < 2.0): Required 3 consecutive monthly evaluations", style = MaterialTheme.typography.labelSmall, color = Color(0xFFC62828))
                     }
                 }
 
