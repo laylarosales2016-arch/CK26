@@ -28,7 +28,8 @@ class SyncWorker(
                 database.attritionDao(),
                 database.daDao(),
                 database.activityLogDao(),
-                database.scheduleDao()
+                database.scheduleDao(),
+                database.appraisalDao()
             )
             val supabaseSync = SupabaseSyncManager(repository)
             

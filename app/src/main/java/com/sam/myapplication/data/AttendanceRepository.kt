@@ -11,7 +11,8 @@ class AttendanceRepository(
     private val attritionDao: AttritionDao,
     private val daDao: DADao,
     private val activityLogDao: ActivityLogDao,
-    private val scheduleDao: ScheduleDao
+    private val scheduleDao: ScheduleDao,
+    private val appraisalDao: AppraisalDao
 ) {
     val allEmployees: Flow<List<Employee>> = employeeDao.getAllEmployees()
 
@@ -131,6 +132,7 @@ class AttendanceRepository(
     suspend fun clearAllPermits() = workPermitDao.clearAll()
     suspend fun clearAllSchedules() = scheduleDao.clearAllSchedules()
     suspend fun clearAllShiftTemplates() = scheduleDao.clearAllShiftTemplates()
+    suspend fun clearAllAppraisals() = appraisalDao.clearAll()
 
     val allAttendanceRecords: Flow<List<AttendanceRecord>> = employeeDao.getAllAttendanceRecords()
 
@@ -200,6 +202,13 @@ class AttendanceRepository(
     suspend fun deleteSchedule(schedule: EmployeeSchedule) = scheduleDao.deleteSchedule(schedule)
     suspend fun insertShiftTemplate(template: ShiftTemplate) = scheduleDao.insertShiftTemplate(template)
     suspend fun deleteShiftTemplate(template: ShiftTemplate) = scheduleDao.deleteShiftTemplate(template)
+
+    // Appraisal methods
+    fun getAppraisalsForEmployee(employeeId: String) = appraisalDao.getAppraisalsForEmployee(employeeId)
+    val allAppraisals = appraisalDao.getAllAppraisals()
+    suspend fun insertAppraisal(appraisal: AppraisalRecord) = appraisalDao.insert(appraisal)
+    suspend fun deleteAppraisal(appraisal: AppraisalRecord) = appraisalDao.delete(appraisal)
+    suspend fun deleteAllAppraisalsForEmployee(employeeId: String) = appraisalDao.deleteAllForEmployee(employeeId)
 
     suspend fun repairEmployeeLinks() {
         val employees = employeeDao.getAllEmployees().first()

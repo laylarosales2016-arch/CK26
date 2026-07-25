@@ -32,7 +32,8 @@ class MainActivity : ComponentActivity() {
             database.attritionDao(),
             database.daDao(),
             database.activityLogDao(),
-            database.scheduleDao()
+            database.scheduleDao(),
+            database.appraisalDao()
         ) 
     }
     private val authService by lazy { GoogleAuthService(applicationContext) }

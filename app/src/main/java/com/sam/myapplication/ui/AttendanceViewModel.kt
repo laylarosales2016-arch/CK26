@@ -1484,6 +1484,56 @@ class AttendanceViewModel(
         }
     }
 
+    // Appraisals
+    fun getAppraisalsForEmployee(employeeId: String): Flow<List<AppraisalRecord>> {
+        return repository.getAppraisalsForEmployee(employeeId)
+    }
+
+    fun saveAppraisal(appraisal: AppraisalRecord) {
+        viewModelScope.launch {
+            repository.insertAppraisal(appraisal)
+            logActivity("Save Appraisal", "For employee ID: ${appraisal.employeeId}")
+            launch(Dispatchers.IO) {
+                try {
+                    // Update main employee profile with LATEST appraisal data
+                    val emp = repository.getEmployeeById(appraisal.employeeId)
+                    if (emp != null) {
+                        repository.insertEmployee(emp.copy(
+                            performanceScore = appraisal.score,
+                            performanceComments = appraisal.comments,
+                            rating1 = appraisal.rating1,
+                            rating2 = appraisal.rating2,
+                            rating3 = appraisal.rating3,
+                            rating4 = appraisal.rating4,
+                            rating5 = appraisal.rating5,
+                            appraisalMonth = appraisal.month,
+                            appraisalQtr = appraisal.quarter
+                        ))
+                    }
+                    
+                    supabaseSync.syncAppraisals()
+                    supabaseSync.uploadEmployeeData(appraisal.employeeId)
+                } catch (e: Exception) {
+                    Log.e("SyncAppraisal", "Error syncing appraisal", e)
+                }
+            }
+        }
+    }
+
+    fun deleteAppraisal(appraisal: AppraisalRecord) {
+        viewModelScope.launch {
+            repository.deleteAppraisal(appraisal)
+            logActivity("Delete Appraisal", "For employee ID: ${appraisal.employeeId}")
+            launch(Dispatchers.IO) {
+                try {
+                    supabaseSync.deleteAppraisalRemote(appraisal.id)
+                } catch (e: Exception) {
+                    Log.e("SyncAppraisal", "Error deleting appraisal remote", e)
+                }
+            }
+        }
+    }
+
     fun exportSchedulerToExcel(
         outputStream: OutputStream,
         employees: List<Employee>,

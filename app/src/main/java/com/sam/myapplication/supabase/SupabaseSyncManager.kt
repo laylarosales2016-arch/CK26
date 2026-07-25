@@ -724,6 +724,32 @@ class SupabaseSyncManager(
         }
     }
 
+    suspend fun syncAppraisals() {
+        try {
+            // 1. Upload local appraisals
+            val allAppraisals = repository.allAppraisals.first()
+            if (allAppraisals.isNotEmpty()) {
+                client.postgrest["appraisal_records"].upsert(allAppraisals) {
+                    onConflict = "id"
+                }
+            }
+
+            // 2. Download remote appraisals
+            val remoteAppraisals = client.postgrest["appraisal_records"].select().decodeList<AppraisalRecord>()
+            remoteAppraisals.forEach { repository.insertAppraisal(it) }
+        } catch (e: Exception) {
+            Log.e("SupabaseSync", "SYNC APPRAISALS FAILED: ${e.message}")
+        }
+    }
+
+    suspend fun deleteAppraisalRemote(id: String) {
+        try {
+            client.postgrest["appraisal_records"].delete { filter { eq("id", id) } }
+        } catch (e: Exception) {
+            Log.e("SupabaseSync", "Failed to delete appraisal remotely: ${e.message}")
+        }
+    }
+
     suspend fun saveTargetHeadcount(count: Int) {
         saveSetting("target_headcount", count.toString())
     }

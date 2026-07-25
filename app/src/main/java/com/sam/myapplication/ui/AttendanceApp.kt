@@ -171,6 +171,7 @@ import com.sam.myapplication.data.DARecord
 import com.sam.myapplication.data.Announcement
 import com.sam.myapplication.data.DailySummaryNote
 import com.sam.myapplication.data.RequestType
+import com.sam.myapplication.data.AppraisalRecord
 import android.net.nsd.NsdServiceInfo
 import java.io.File
 import java.time.Instant
@@ -3718,38 +3719,42 @@ fun EmployeeDetailScreen(
     var showDownloadWarning by remember { mutableStateOf(false) }
     var downloadAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showAppraisalDialog by rememberSaveable { mutableStateOf(false) }
+    var showAppraisalHistory by remember { mutableStateOf(false) }
     var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
+    var targetAppraisalRecord by remember { mutableStateOf<AppraisalRecord?>(null) }
     var imageRefreshKey by remember { mutableLongStateOf(0L) }
     
-    if (showAppraisalDialog) {
-        PerformanceAppraisalPicker(
-            employees = employees,
-            onEmployeeSelected = { emp ->
-                targetAppraisalEmployee = emp
-                // Form dialog will show since targetAppraisalEmployee is now not null
-            },
-            onDismiss = { showAppraisalDialog = false }
+    if (showAppraisalHistory && employee != null) {
+        PerformanceAppraisalHistoryDialog(
+            employee = employee,
+            viewModel = viewModel,
+            onDismiss = { showAppraisalHistory = false },
+            onViewAppraisal = { targetAppraisalRecord = it }
         )
     }
 
-    if (targetAppraisalEmployee != null) {
+    if (targetAppraisalRecord != null && employee != null) {
         PerformanceAppraisalDialog(
-            employee = targetAppraisalEmployee!!,
+            employee = employee,
+            record = targetAppraisalRecord,
             readOnly = loggedInEmployee?.isAdmin != true,
             onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
-                viewModel.updateEmployee(localContext, targetAppraisalEmployee!!.copy(
-                    performanceScore = score, 
-                    performanceComments = comment,
+                val updated = targetAppraisalRecord!!.copy(
+                    score = score,
+                    comments = comment,
                     rating1 = r1,
                     rating2 = r2,
                     rating3 = r3,
                     rating4 = r4,
                     rating5 = r5,
-                    appraisalMonth = mon,
-                    appraisalQtr = qtr
-                ))
+                    month = mon,
+                    quarter = qtr ?: 1,
+                    year = LocalDate.now().year
+                )
+                viewModel.saveAppraisal(updated)
+                targetAppraisalRecord = null
             },
-            onDismiss = { targetAppraisalEmployee = null }
+            onDismiss = { targetAppraisalRecord = null }
         )
     }
 
@@ -4302,14 +4307,6 @@ fun EmployeeDetailScreen(
                             onDismissRequest = { showDetailMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Performance Appraisal") },
-                                onClick = {
-                                    showDetailMenu = false
-                                    targetAppraisalEmployee = employee
-                                },
-                                leadingIcon = { Icon(Icons.Default.Assignment, null) }
-                            )
-                            DropdownMenuItem(
                                 text = { Text("Daily Time Record (DTR)") },
                                 onClick = {
                                     showDetailMenu = false
@@ -4538,6 +4535,20 @@ fun EmployeeDetailScreen(
                                 Icon(Icons.Default.Description, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("Payslip", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            }
+                        }
+
+                        if (loggedInEmployee?.id == employeeId || loggedInEmployee?.isAdmin == true) {
+                            Button(
+                                onClick = { showAppraisalHistory = true },
+                                modifier = Modifier.height(48.dp),
+                                shape = MaterialTheme.shapes.medium,
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(Icons.Default.Assignment, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Performance Appraisal", style = MaterialTheme.typography.labelSmall, maxLines = 1)
                             }
                         }
 
@@ -9309,33 +9320,131 @@ fun PerformanceAppraisalPicker(
 }
 
 @Composable
+fun PerformanceAppraisalHistoryDialog(
+    employee: Employee,
+    viewModel: AttendanceViewModel,
+    onDismiss: () -> Unit,
+    onViewAppraisal: (AppraisalRecord) -> Unit
+) {
+    val appraisals by viewModel.getAppraisalsForEmployee(employee.id).collectAsState(initial = emptyList())
+    val loggedInEmployee by viewModel.loggedInEmployee.collectAsState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Appraisal History - ${employee.firstName} ${employee.lastName}") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (loggedInEmployee?.isAdmin == true) {
+                    Button(
+                        onClick = {
+                            val newRecord = AppraisalRecord(
+                                employeeId = employee.id,
+                                score = 0.0,
+                                comments = "",
+                                rating1 = 0,
+                                rating2 = 0,
+                                rating3 = 0,
+                                rating4 = 0,
+                                rating5 = 0,
+                                month = "",
+                                quarter = 1,
+                                year = LocalDate.now().year
+                            )
+                            onViewAppraisal(newRecord)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("New Appraisal")
+                    }
+                }
+
+                if (appraisals.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                        Text("No appraisals found", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                        items(appraisals) { record ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { onViewAppraisal(record) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (record.score < 2.0) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("${record.month} ${record.year} - Q${record.quarter}", fontWeight = FontWeight.Bold)
+                                        Text("Score: ${String.format("%.1f", record.score)}", 
+                                            color = if (record.score < 2.0) Color.Red else Color.Unspecified,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    Icon(Icons.Default.ChevronRight, null)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Logic for monthly follow-up if failed
+                val lastFailed = appraisals.firstOrNull { it.score < 2.0 }
+                if (lastFailed != null) {
+                    val followUps = appraisals.filter { it.createdAt > lastFailed.createdAt }
+                    if (followUps.size < 3) {
+                        Surface(
+                            color = Color(0xFFFFEBEE),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(top = 12.dp).fillMaxWidth()
+                        ) {
+                            Text(
+                                "Note: Employee failed last appraisal. ${3 - followUps.size} more monthly appraisals required.",
+                                modifier = Modifier.padding(8.dp),
+                                color = Color(0xFFC62828),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+@Composable
 fun PerformanceAppraisalDialog(
     employee: Employee,
+    record: AppraisalRecord? = null,
     readOnly: Boolean = false,
     onSave: (Double, String, Int, Int, Int, Int, Int, String, Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var month by remember { mutableStateOf(employee.appraisalMonth ?: "") }
+    var month by remember { mutableStateOf(record?.month ?: employee.appraisalMonth ?: "") }
     var monthExpanded by remember { mutableStateOf(false) }
     val months = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
     
-    var qtr by remember { mutableStateOf<Int?>(employee.appraisalQtr) }
-    var rating1 by remember { mutableIntStateOf(employee.rating1 ?: 0) }
-    var rating2 by remember { mutableIntStateOf(employee.rating2 ?: 0) }
-    var rating3 by remember { mutableIntStateOf(employee.rating3 ?: 0) }
-    var rating4 by remember { mutableIntStateOf(employee.rating4 ?: 0) }
-    var rating5 by remember { mutableIntStateOf(employee.rating5 ?: 0) }
-    var comments by remember { mutableStateOf(employee.performanceComments ?: "") }
+    var qtr by remember { mutableStateOf<Int?>(record?.quarter ?: employee.appraisalQtr) }
+    var rating1 by remember { mutableIntStateOf(record?.rating1 ?: employee.rating1 ?: 0) }
+    var rating2 by remember { mutableIntStateOf(record?.rating2 ?: employee.rating2 ?: 0) }
+    var rating3 by remember { mutableIntStateOf(record?.rating3 ?: employee.rating3 ?: 0) }
+    var rating4 by remember { mutableIntStateOf(record?.rating4 ?: employee.rating4 ?: 0) }
+    var rating5 by remember { mutableIntStateOf(record?.rating5 ?: employee.rating5 ?: 0) }
+    var comments by remember { mutableStateOf(record?.comments ?: employee.performanceComments ?: "") }
 
     val score = (rating1 + rating2 + rating3 + rating4 + rating5)
     val averageScore = if (score > 0) score / 5.0 else 0.0
-
-    // Autosave Effect
-    LaunchedEffect(rating1, rating2, rating3, rating4, rating5, comments, month, qtr) {
-        if (!readOnly && (rating1 > 0 || rating2 > 0 || rating3 > 0 || rating4 > 0 || rating5 > 0 || comments.isNotBlank() || month.isNotBlank() || qtr != null)) {
-            onSave(averageScore, comments, rating1, rating2, rating3, rating4, rating5, month, qtr)
-        }
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
