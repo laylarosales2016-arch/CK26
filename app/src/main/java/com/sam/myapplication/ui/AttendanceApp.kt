@@ -98,6 +98,7 @@ import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.FolderOpen
@@ -117,6 +118,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.FragmentActivity
+import com.sam.myapplication.auth.BiometricHelper
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
@@ -702,6 +705,7 @@ fun AttendanceApp(viewModel: AttendanceViewModel) {
                 ) {
                 composable(Screen.Login.route) {
                     LoginScreen(
+                        viewModel = viewModel,
                         onSync = {
                             viewModel.syncAccountsOnly { success ->
                                 scope.launch {
@@ -845,12 +849,39 @@ fun AttendanceApp(viewModel: AttendanceViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
+    viewModel: AttendanceViewModel,
     onSync: () -> Unit,
     onEmployeeLogin: (String, String) -> Unit
 ) {
+    val context = LocalContext.current
+    val rememberMe by viewModel.rememberMe.collectAsState()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    
     var employeeNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    
+    val biometricHelper = remember { BiometricHelper(context as FragmentActivity) }
+    val canUseBiometric = remember { biometricHelper.canAuthenticate() }
+
+    // Auto-fill logic
+    LaunchedEffect(Unit) {
+        if (viewModel.rememberMe.value) {
+            val (savedNo, savedPass) = viewModel.getStoredCredentials()
+            if (savedNo != null && savedPass != null) {
+                employeeNo = savedNo
+                password = savedPass
+                
+                // If biometric is enabled, trigger it automatically
+                if (viewModel.isBiometricEnabled.value && canUseBiometric) {
+                    biometricHelper.showBiometricPrompt(
+                        onSuccess = { onEmployeeLogin(savedNo, savedPass) },
+                        onError = { /* Log error or show message */ }
+                    )
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -944,15 +975,70 @@ fun LoginScreen(
                         }
                     )
 
+                    Spacer(modifier = Modifier.height(12.s()))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = rememberMe,
+                                onCheckedChange = { viewModel.toggleRememberMe(it) }
+                            )
+                            Text("Remember Me", fontSize = 12.spS())
+                        }
+                        
+                        if (canUseBiometric) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Biometric", fontSize = 12.spS())
+                                Switch(
+                                    checked = isBiometricEnabled,
+                                    onCheckedChange = { viewModel.toggleBiometric(it) },
+                                    modifier = Modifier.scale(0.8f)
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(20.s()))
                     
-                    Button(
-                        onClick = { onEmployeeLogin(employeeNo, password) },
-                        modifier = Modifier.fillMaxWidth().height(52.s()),
-                        shape = MaterialTheme.shapes.large,
-                        enabled = employeeNo.isNotBlank() && password.isNotBlank()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.s())
                     ) {
-                        Text("LOGIN", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.spS()), fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { onEmployeeLogin(employeeNo, password) },
+                            modifier = Modifier.weight(1f).height(52.s()),
+                            shape = MaterialTheme.shapes.large,
+                            enabled = employeeNo.isNotBlank() && password.isNotBlank()
+                        ) {
+                            Text("LOGIN", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.spS()), fontWeight = FontWeight.Bold)
+                        }
+                        
+                        if (canUseBiometric && isBiometricEnabled) {
+                            FilledIconButton(
+                                onClick = {
+                                    val (savedNo, savedPass) = viewModel.getStoredCredentials()
+                                    if (savedNo != null && savedPass != null) {
+                                        biometricHelper.showBiometricPrompt(
+                                            onSuccess = { onEmployeeLogin(savedNo, savedPass) },
+                                            onError = { /* Handle error */ }
+                                        )
+                                    } else {
+                                        // No saved credentials, maybe show a message
+                                    }
+                                },
+                                modifier = Modifier.size(52.s()),
+                                shape = MaterialTheme.shapes.large,
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Icon(Icons.Default.Fingerprint, "Biometric Login", modifier = Modifier.size(32.s()))
+                            }
+                        }
                     }
                 }
             }

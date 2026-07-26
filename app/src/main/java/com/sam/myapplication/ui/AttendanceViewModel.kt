@@ -29,6 +29,8 @@ import java.time.LocalDate
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.sam.myapplication.auth.CredentialManager
+import kotlinx.coroutines.flow.first
 
 class AttendanceViewModel(
     private val repository: AttendanceRepository,
@@ -40,6 +42,23 @@ class AttendanceViewModel(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val prefs = context.getSharedPreferences("attendance_prefs", Context.MODE_PRIVATE)
+    private val credentialManager = CredentialManager(context)
+
+    val rememberMe = MutableStateFlow(credentialManager.rememberMe)
+    val isBiometricEnabled = MutableStateFlow(credentialManager.isBiometricEnabled)
+
+    fun toggleRememberMe(enabled: Boolean) {
+        rememberMe.value = enabled
+        credentialManager.rememberMe = enabled
+        if (!enabled) credentialManager.clearCredentials()
+    }
+
+    fun toggleBiometric(enabled: Boolean) {
+        isBiometricEnabled.value = enabled
+        credentialManager.isBiometricEnabled = enabled
+    }
+
+    fun getStoredCredentials() = credentialManager.getCredentials()
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -354,6 +373,9 @@ class AttendanceViewModel(
                 
                 _loggedInEmployee.value = admin
                 _loginStatus.value = "Login Successful"
+                if (rememberMe.value) {
+                    credentialManager.saveCredentials(employeeNo, passwordHash)
+                }
                 onResult(true, null)
                 return@launch
             }
@@ -362,6 +384,9 @@ class AttendanceViewModel(
             if (employee != null && employee.passwordHash == passwordHash) {
                 _loggedInEmployee.value = employee
                 _loginStatus.value = "Login Successful"
+                if (rememberMe.value) {
+                    credentialManager.saveCredentials(employeeNo, passwordHash)
+                }
                 onResult(true, null)
             } else {
                 onResult(false, "Invalid Employee No or Password")
@@ -1166,13 +1191,13 @@ class AttendanceViewModel(
     // Schedule methods
     fun saveSchedule(schedule: EmployeeSchedule) {
         viewModelScope.launch { 
-            repository.insertSchedule(schedule)
+            repository.saveScheduleSafe(schedule)
         }
     }
 
     fun deleteSchedule(schedule: EmployeeSchedule) {
         viewModelScope.launch { 
-            repository.deleteSchedule(schedule)
+            repository.clearScheduleSafe(schedule)
         }
     }
 

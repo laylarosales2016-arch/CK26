@@ -210,6 +210,47 @@ class AttendanceRepository(
     suspend fun deleteAppraisal(appraisal: AppraisalRecord) = appraisalDao.delete(appraisal)
     suspend fun deleteAllAppraisalsForEmployee(employeeId: String) = appraisalDao.deleteAllForEmployee(employeeId)
 
+    suspend fun saveScheduleSafe(schedule: EmployeeSchedule) {
+        val existing = scheduleDao.getScheduleSync(schedule.employeeId, schedule.date)
+        if (existing != null) {
+            val merged = existing.copy(
+                scheduleText = if (schedule.scheduleText != null) schedule.scheduleText else existing.scheduleText,
+                tag = if (schedule.tag != null) schedule.tag else existing.tag,
+                color = if (schedule.color != null) schedule.color else existing.color,
+                fontColor = if (schedule.fontColor != null) schedule.fontColor else existing.fontColor,
+                position = if (schedule.position != null) schedule.position else existing.position,
+                schedulerOrder = if (schedule.schedulerOrder != null) schedule.schedulerOrder else existing.schedulerOrder,
+                employeeName = if (schedule.employeeName != null) schedule.employeeName else existing.employeeName
+            )
+            scheduleDao.insertSchedule(merged)
+        } else {
+            scheduleDao.insertSchedule(schedule)
+        }
+    }
+
+    suspend fun clearScheduleSafe(schedule: EmployeeSchedule) {
+        val existing = scheduleDao.getScheduleSync(schedule.employeeId, schedule.date)
+        if (existing != null) {
+            // If it has metadata (position, order, or is a HIDDEN marker), keep it but clear the shift
+            if (existing.position != null || existing.schedulerOrder != null || existing.tag == "HIDDEN") {
+                val cleared = existing.copy(
+                    scheduleText = null,
+                    tag = null, // Note: If tag was HIDDEN, this clears it? No, maybe keep tag if it was important? 
+                    // Usually RD/RRD/SICK/NS are the tags to clear. HIDDEN is metadata.
+                    color = null,
+                    fontColor = null
+                )
+                // If it was HIDDEN, we probably want to keep it HIDDEN until restored.
+                // But the "Clear" button in the dialog is for the shift.
+                val finalCleared = if (existing.tag == "HIDDEN") cleared.copy(tag = "HIDDEN") else cleared
+                
+                scheduleDao.insertSchedule(finalCleared)
+            } else {
+                scheduleDao.deleteSchedule(existing)
+            }
+        }
+    }
+
     suspend fun repairEmployeeLinks() {
         val employees = employeeDao.getAllEmployees().first()
         employees.forEach { emp ->

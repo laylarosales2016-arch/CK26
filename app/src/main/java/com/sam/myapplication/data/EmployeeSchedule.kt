@@ -14,7 +14,9 @@ data class EmployeeSchedule(
     val tag: String? = null, // RD, RRD, SICK, NS
     val color: Int? = null,
     @SerialName("font_color") val fontColor: Int? = null,
-    val position: String? = null
+    val position: String? = null,
+    @SerialName("scheduler_order") val schedulerOrder: Int? = null,
+    @SerialName("employee_name") val employeeName: String? = null
 )
 
 @Entity(tableName = "shift_templates")
@@ -23,5 +25,7 @@ data class ShiftTemplate(
     @PrimaryKey @SerialName("time_range") val timeRange: String, // e.g., "11-10", "9-5"
     val color: Int? = null,
     @SerialName("font_color") val fontColor: Int? = null,
-    val position: String? = null
+    val position: String? = null,
+    @SerialName("scheduler_order") val schedulerOrder: Int? = null,
+    @SerialName("employee_name") val employeeName: String? = null
 )

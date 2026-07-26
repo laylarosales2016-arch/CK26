@@ -17,10 +17,11 @@ import com.sam.myapplication.ui.AttendanceApp
 import com.sam.myapplication.ui.AttendanceViewModel
 import com.sam.myapplication.ui.theme.MyApplicationTheme
 
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val database by lazy { AppDatabase.getDatabase(this) }
     private val repository by lazy { 

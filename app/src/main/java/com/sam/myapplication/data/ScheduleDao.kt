@@ -17,6 +17,9 @@ interface ScheduleDao {
     @Query("SELECT * FROM employee_schedules WHERE employeeId = :employeeId AND date BETWEEN :startDate AND :endDate")
     fun getSchedulesInRange(employeeId: String, startDate: String, endDate: String): Flow<List<EmployeeSchedule>>
 
+    @Query("SELECT * FROM employee_schedules WHERE employeeId = :employeeId AND date = :date")
+    suspend fun getScheduleSync(employeeId: String, date: String): EmployeeSchedule?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSchedule(schedule: EmployeeSchedule)
 
