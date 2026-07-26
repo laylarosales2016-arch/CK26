@@ -1496,18 +1496,21 @@ class AttendanceViewModel(
             launch(Dispatchers.IO) {
                 try {
                     // Update main employee profile with LATEST appraisal data
+                    val all = repository.getAppraisalsForEmployee(appraisal.employeeId).first()
+                    val latest = all.maxByOrNull { it.createdAt } ?: appraisal
+
                     val emp = repository.getEmployeeById(appraisal.employeeId)
                     if (emp != null) {
                         repository.insertEmployee(emp.copy(
-                            performanceScore = appraisal.score,
-                            performanceComments = appraisal.comments,
-                            rating1 = appraisal.rating1,
-                            rating2 = appraisal.rating2,
-                            rating3 = appraisal.rating3,
-                            rating4 = appraisal.rating4,
-                            rating5 = appraisal.rating5,
-                            appraisalMonth = appraisal.month,
-                            appraisalQtr = appraisal.quarter
+                            performanceScore = latest.score,
+                            performanceComments = latest.comments,
+                            rating1 = latest.rating1,
+                            rating2 = latest.rating2,
+                            rating3 = latest.rating3,
+                            rating4 = latest.rating4,
+                            rating5 = latest.rating5,
+                            appraisalMonth = latest.month,
+                            appraisalQtr = latest.quarter
                         ))
                     }
                     
@@ -1526,9 +1529,27 @@ class AttendanceViewModel(
             logActivity("Delete Appraisal", "For employee ID: ${appraisal.employeeId}")
             launch(Dispatchers.IO) {
                 try {
+                    // Update main employee profile with the remaining LATEST appraisal data
+                    val remaining = repository.getAppraisalsForEmployee(appraisal.employeeId).first()
+                    val latest = remaining.maxByOrNull { it.createdAt }
+                    val emp = repository.getEmployeeById(appraisal.employeeId)
+                    if (emp != null) {
+                        repository.insertEmployee(emp.copy(
+                            performanceScore = latest?.score,
+                            performanceComments = latest?.comments ?: "",
+                            rating1 = latest?.rating1 ?: 0,
+                            rating2 = latest?.rating2 ?: 0,
+                            rating3 = latest?.rating3 ?: 0,
+                            rating4 = latest?.rating4 ?: 0,
+                            rating5 = latest?.rating5 ?: 0,
+                            appraisalMonth = latest?.month ?: "",
+                            appraisalQtr = latest?.quarter
+                        ))
+                        supabaseSync.uploadEmployeeData(appraisal.employeeId)
+                    }
                     supabaseSync.deleteAppraisalRemote(appraisal.id)
                 } catch (e: Exception) {
-                    Log.e("SyncAppraisal", "Error deleting appraisal remote", e)
+                    Log.e("SyncAppraisal", "Error deleting appraisal or updating profile", e)
                 }
             }
         }

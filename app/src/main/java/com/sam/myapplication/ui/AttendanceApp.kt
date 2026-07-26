@@ -1176,17 +1176,20 @@ fun EmployeeListScreen(
         PerformanceAppraisalDialog(
             employee = targetAppraisalEmployee!!,
             onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
-                viewModel.updateEmployee(context, targetAppraisalEmployee!!.copy(
-                    performanceScore = score, 
-                    performanceComments = comment,
+                val newRecord = AppraisalRecord(
+                    employeeId = targetAppraisalEmployee!!.employeeNo ?: targetAppraisalEmployee!!.id,
+                    score = score,
+                    comments = comment,
                     rating1 = r1,
                     rating2 = r2,
                     rating3 = r3,
                     rating4 = r4,
                     rating5 = r5,
-                    appraisalMonth = mon,
-                    appraisalQtr = qtr
-                ))
+                    month = mon,
+                    quarter = qtr ?: 1,
+                    year = LocalDate.now().year
+                )
+                viewModel.saveAppraisal(newRecord)
             },
             onDismiss = { targetAppraisalEmployee = null }
         )
@@ -2085,6 +2088,11 @@ fun EmployeeListScreen(
                         val daysToHealthExpiry = calculateDaysToExpiry(employee.healthIdExpirationDate)
                         val daysToResign = if (employee.isResigned == true && employee.resignationDate != null) calculateDaysToExpiry(employee.resignationDate) else null
                         val timeHired = calculateTimeHired(employee.dateHired, employee.resignationDate)
+                        val dateHiredParsed = parseDate(employee.dateHired)
+                        val isRegular = if (dateHiredParsed == null) false else {
+                            val sixMonthsAgo = LocalDate.now().minusMonths(6)
+                            dateHiredParsed.isBefore(sixMonthsAgo) || dateHiredParsed.isEqual(sixMonthsAgo)
+                        }
                         
                         val totalOffences = (employee.lateOffenceLevel ?: 0) + 
                                 (employee.absentOffenceLevel ?: 0) + 
@@ -2138,6 +2146,53 @@ fun EmployeeListScreen(
                                 },
                                 supportingContent = { 
                                     Column {
+                                        if (isRegular && employee.position != "Excrew") {
+                                            val goldGlitter = Brush.linearGradient(
+                                                colors = listOf(Color(0xFFFFD700), Color(0xFFFFFACD), Color(0xFFFFD700), Color(0xFFDAA520), Color(0xFFFFD700))
+                                            )
+                                            Surface(
+                                                modifier = Modifier.padding(vertical = 2.dp).shadow(1.dp, RoundedCornerShape(4.dp)),
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color.Transparent,
+                                                border = androidx.compose.foundation.BorderStroke(0.5.dp, goldGlitter)
+                                            ) {
+                                                Text(
+                                                    text = "REGULAR",
+                                                    modifier = Modifier
+                                                        .background(brush = goldGlitter, alpha = 0.1f)
+                                                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        brush = goldGlitter,
+                                                        fontWeight = FontWeight.Black,
+                                                        letterSpacing = 1.sp,
+                                                        fontSize = 8.sp
+                                                    )
+                                                )
+                                            }
+                                        } else if (!isRegular && employee.position != "Excrew" && !employee.dateHired.isNullOrBlank()) {
+                                            val silverGlitter = Brush.linearGradient(
+                                                colors = listOf(Color(0xFFC0C0C0), Color(0xFFF5F5F5), Color(0xFFC0C0C0), Color(0xFFB0B0B0), Color(0xFFC0C0C0))
+                                            )
+                                            Surface(
+                                                modifier = Modifier.padding(vertical = 2.dp).shadow(1.dp, RoundedCornerShape(4.dp)),
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color.Transparent,
+                                                border = androidx.compose.foundation.BorderStroke(0.5.dp, silverGlitter)
+                                            ) {
+                                                Text(
+                                                    text = "PROBATIONARY",
+                                                    modifier = Modifier
+                                                        .background(brush = silverGlitter, alpha = 0.1f)
+                                                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        brush = silverGlitter,
+                                                        fontWeight = FontWeight.Black,
+                                                        letterSpacing = 1.sp,
+                                                        fontSize = 8.sp
+                                                    )
+                                                )
+                                            }
+                                        }
                                         Text(
                                             (employee.position ?: "") + if (employee.isResigned == true) " (Resigned)" else "",
                                             style = MaterialTheme.typography.bodyMedium,
@@ -3685,7 +3740,7 @@ fun getOrdinal(n: Int): String {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EmployeeDetailScreen(
     employeeId: String,
@@ -3722,6 +3777,7 @@ fun EmployeeDetailScreen(
     var showAppraisalHistory by remember { mutableStateOf(false) }
     var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
     var targetAppraisalRecord by remember { mutableStateOf<AppraisalRecord?>(null) }
+    var showAppraisalDeleteConfirmation by remember { mutableStateOf(false) }
     var imageRefreshKey by remember { mutableLongStateOf(0L) }
     
     if (showAppraisalHistory && employee != null) {
@@ -3754,7 +3810,29 @@ fun EmployeeDetailScreen(
                 viewModel.saveAppraisal(updated)
                 targetAppraisalRecord = null
             },
+            onDelete = {
+                showAppraisalDeleteConfirmation = true
+            },
             onDismiss = { targetAppraisalRecord = null }
+        )
+    }
+
+    if (showAppraisalDeleteConfirmation && targetAppraisalRecord != null) {
+        AlertDialog(
+            onDismissRequest = { showAppraisalDeleteConfirmation = false },
+            title = { Text("Delete Appraisal") },
+            text = { Text("Are you sure you want to delete this appraisal record?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteAppraisal(targetAppraisalRecord!!)
+                        targetAppraisalRecord = null
+                        showAppraisalDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { showAppraisalDeleteConfirmation = false }) { Text("Cancel") } }
         )
     }
 
@@ -4212,24 +4290,7 @@ fun EmployeeDetailScreen(
                     }
                 },
                 actions = {
-                    if (employee != null && employee.id != loggedInEmployee?.id) {
-                        if (loggedInEmployee?.isAdmin == true && !employee.mallIdNo.isNullOrBlank()) {
-                            IconButton(onClick = { viewModel.startScrapingMallId(listOf(employee.id)) }) {
-                                Icon(Icons.Default.ManageSearch, contentDescription = "Scrape Mall ID")
-                            }
-                        }
-                        IconButton(onClick = { onChatClick(employee.employeeNo ?: employee.id, employee.firstName ?: "User") }) {
-                            Icon(Icons.Default.Message, contentDescription = "Message")
-                        }
-                    } else if (employee != null && employee.id == loggedInEmployee?.id) {
-                        // User's own profile - show Inbox/Chat list button
-                        IconButton(onClick = onOpenChatList) {
-                            val unreadCount by viewModel.getUnreadMessageCount(loggedInEmployee?.employeeNo ?: loggedInEmployee?.id ?: "").collectAsState(0)
-                            BadgedBox(badge = { if (unreadCount > 0) Badge { Text(unreadCount.toString()) } }) {
-                                Icon(Icons.Default.Chat, contentDescription = "Terminal Chat")
-                            }
-                        }
-                    }
+                    var showDetailMenu by remember { mutableStateOf(false) }
                     val announcements by viewModel.getAnnouncementsForEmployee(employeeId).collectAsState(initial = emptyList())
                     val unreadCount = announcements.count { !it.isRead }
                     
@@ -4249,28 +4310,81 @@ fun EmployeeDetailScreen(
                         count
                     }
 
-                    IconButton(onClick = { showAnnouncements = true }) {
+                    IconButton(onClick = { showDetailMenu = true }) {
                         BadgedBox(badge = { if (alertsCount > 0) Badge { Text(alertsCount.toString()) } }) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
                         }
                     }
 
-                    var showDetailMenu by remember { mutableStateOf(false) }
+                    DropdownMenu(
+                        expanded = showDetailMenu,
+                        onDismissRequest = { showDetailMenu = false }
+                    ) {
+                        if (employee != null && employee.id != loggedInEmployee?.id) {
+                            if (loggedInEmployee?.isAdmin == true && !employee.mallIdNo.isNullOrBlank()) {
+                                DropdownMenuItem(
+                                    text = { Text("Scrape Mall ID") },
+                                    onClick = {
+                                        showDetailMenu = false
+                                        viewModel.startScrapingMallId(listOf(employee.id))
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.ManageSearch, null) }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Message") },
+                                onClick = {
+                                    showDetailMenu = false
+                                    onChatClick(employee.employeeNo ?: employee.id, employee.firstName ?: "User")
+                                },
+                                leadingIcon = { Icon(Icons.Default.Message, null) }
+                            )
+                        } else if (employee != null && employee.id == loggedInEmployee?.id) {
+                            DropdownMenuItem(
+                                text = { 
+                                    val unreadChatCount by viewModel.getUnreadMessageCount(loggedInEmployee?.employeeNo ?: loggedInEmployee?.id ?: "").collectAsState(0)
+                                    BadgedBox(badge = { if (unreadChatCount > 0) Badge { Text(unreadChatCount.toString()) } }) {
+                                        Text("Terminal Chat")
+                                    }
+                                },
+                                onClick = {
+                                    showDetailMenu = false
+                                    onOpenChatList()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Chat, null) }
+                            )
+                        }
 
-                    if (loggedInEmployee?.isAdmin == true) {
-                        IconButton(onClick = { showDADialog = true }) {
-                            Icon(Icons.Default.History, contentDescription = "Disciplinary Action")
-                        }
-                        IconButton(onClick = { onEditEmployee(employeeId) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Employee")
-                        }
-                        IconButton(onClick = { showDetailMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(
-                            expanded = showDetailMenu,
-                            onDismissRequest = { showDetailMenu = false }
-                        ) {
+                        DropdownMenuItem(
+                            text = { 
+                                BadgedBox(badge = { if (alertsCount > 0) Badge { Text(alertsCount.toString()) } }) {
+                                    Text("Notifications")
+                                }
+                            },
+                            onClick = {
+                                showDetailMenu = false
+                                showAnnouncements = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Notifications, null) }
+                        )
+
+                        if (loggedInEmployee?.isAdmin == true) {
+                            DropdownMenuItem(
+                                text = { Text("Edit Employee") },
+                                onClick = {
+                                    showDetailMenu = false
+                                    onEditEmployee(employeeId)
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Disciplinary Action") },
+                                onClick = {
+                                    showDetailMenu = false
+                                    showDADialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.History, null) }
+                            )
                             if (loggedInEmployee?.id != employeeId) {
                                 DropdownMenuItem(
                                     text = { Text("Change Password") },
@@ -4297,15 +4411,7 @@ fun EmployeeDetailScreen(
                                 },
                                 leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
                             )
-                        }
-                    } else {
-                        IconButton(onClick = { showDetailMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(
-                            expanded = showDetailMenu,
-                            onDismissRequest = { showDetailMenu = false }
-                        ) {
+                        } else {
                             DropdownMenuItem(
                                 text = { Text("Daily Time Record (DTR)") },
                                 onClick = {
@@ -4494,6 +4600,28 @@ fun EmployeeDetailScreen(
                                             )
                                         )
                                     }
+                                } else if (!isRegular && employee.position != "Excrew" && dateHired != null) {
+                                    val silverGlitter = Brush.linearGradient(
+                                        colors = listOf(Color(0xFFC0C0C0), Color(0xFFF5F5F5), Color(0xFFC0C0C0), Color(0xFFB0B0B0), Color(0xFFC0C0C0))
+                                    )
+                                    Surface(
+                                        modifier = Modifier.padding(top = 4.dp).shadow(2.dp, RoundedCornerShape(4.dp)),
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color.Transparent,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, silverGlitter)
+                                    ) {
+                                        Text(
+                                            text = "PROBATIONARY",
+                                            modifier = Modifier
+                                                .background(brush = silverGlitter, alpha = 0.1f)
+                                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                brush = silverGlitter,
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 2.sp
+                                            )
+                                        )
+                                    }
                                 }
                                 
                                 Spacer(Modifier.height(8.dp))
@@ -4526,13 +4654,13 @@ fun EmployeeDetailScreen(
                     }
                 }
 
-                if (loggedInEmployee?.id == (employee?.id ?: -1)) {
-                    Row(
+                if (loggedInEmployee?.id == (employee?.id ?: -1) || loggedInEmployee?.isAdmin == true) {
+                    FlowRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (loggedInEmployee?.id == (employee?.id ?: -1)) {
                             Button(
@@ -7398,17 +7526,20 @@ fun PermitWebViewScreen(
         PerformanceAppraisalDialog(
             employee = targetAppraisalEmployee!!,
             onSave = { score, comment, r1, r2, r3, r4, r5, mon, qtr ->
-                viewModel.updateEmployee(context, targetAppraisalEmployee!!.copy(
-                    performanceScore = score, 
-                    performanceComments = comment,
+                val newRecord = AppraisalRecord(
+                    employeeId = targetAppraisalEmployee!!.employeeNo ?: targetAppraisalEmployee!!.id,
+                    score = score,
+                    comments = comment,
                     rating1 = r1,
                     rating2 = r2,
                     rating3 = r3,
                     rating4 = r4,
                     rating5 = r5,
-                    appraisalMonth = mon,
-                    appraisalQtr = qtr
-                ))
+                    month = mon,
+                    quarter = qtr ?: 1,
+                    year = LocalDate.now().year
+                )
+                viewModel.saveAppraisal(newRecord)
             },
             onDismiss = { targetAppraisalEmployee = null }
         )
@@ -9479,6 +9610,7 @@ fun PerformanceAppraisalDialog(
     record: AppraisalRecord? = null,
     readOnly: Boolean = false,
     onSave: (Double, String, Int, Int, Int, Int, Int, String, Int?) -> Unit,
+    onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     var month by remember { mutableStateOf(record?.month ?: employee.appraisalMonth ?: "") }
@@ -9500,45 +9632,37 @@ fun PerformanceAppraisalDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier
-            .fillMaxWidth(0.95f)
-            .padding(vertical = 24.dp),
+            .fillMaxWidth(0.98f)
+            .padding(vertical = 8.dp),
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text("FUSION", fontWeight = FontWeight.Black, fontSize = 22.sp, color = Color.White)
-                Text("Integrated Service Cooperative", fontSize = 10.sp, color = Color.LightGray)
-                Spacer(Modifier.height(16.dp))
-                Text("PERFORMANCE APPRAISAL FORM", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color.White)
+                Text("FUSION - PERFORMANCE APPRAISAL", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color.White)
+                Text("Integrated Service Cooperative | Store: Chowking SM Clark", fontSize = 9.sp, color = Color.LightGray)
             }
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Spacer(Modifier.height(16.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Name: ${employee.firstName} ${employee.lastName}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Date Hired: ${employee.dateHired ?: "--"}", fontSize = 12.sp, color = Color.LightGray)
-                        Text("Position: ${employee.schedulerPosition ?: employee.position ?: "--"}", fontSize = 12.sp, color = Color.LightGray)
-                    }
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        Text("Store: Chowking SM Clark", fontSize = 12.sp, color = Color.LightGray)
-                    }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Name: ${employee.firstName} ${employee.lastName}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1.2f))
+                    Text("Hired: ${employee.dateHired ?: "--"}", fontSize = 10.sp, color = Color.LightGray, modifier = Modifier.weight(0.8f))
+                    Text("Pos: ${employee.schedulerPosition ?: employee.position ?: "--"}", fontSize = 10.sp, color = Color.LightGray, modifier = Modifier.weight(1f))
                 }
                 
-                Spacer(Modifier.height(20.dp))
-                Text("Appraisal Period:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text("Period:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White, modifier = Modifier.padding(end = 8.dp))
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
                             value = month,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Month", fontSize = 10.sp) },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = Color.White),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = Color.White),
                             trailingIcon = {
                                 if (!readOnly) {
-                                    IconButton(onClick = { monthExpanded = true }) {
-                                        Icon(Icons.Default.MoreVert, null, tint = Color.White)
+                                    IconButton(onClick = { monthExpanded = true }, modifier = Modifier.size(24.dp)) {
+                                        Icon(Icons.Default.MoreVert, null, tint = Color.White, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -9547,7 +9671,7 @@ fun PerformanceAppraisalDialog(
                             DropdownMenu(expanded = monthExpanded, onDismissRequest = { monthExpanded = false }) {
                                 months.forEach { m ->
                                     DropdownMenuItem(
-                                        text = { Text(m) },
+                                        text = { Text(m, fontSize = 12.sp) },
                                         onClick = { month = m; monthExpanded = false }
                                     )
                                 }
@@ -9557,92 +9681,92 @@ fun PerformanceAppraisalDialog(
                     
                     Spacer(Modifier.width(8.dp))
                     
-                    Column(modifier = Modifier.weight(1.8f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            (1..2).forEach { i ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
-                                    RadioButton(
-                                        selected = qtr == i, 
-                                        onClick = { if (!readOnly) qtr = i }, 
-                                        modifier = Modifier.size(32.dp), 
-                                        enabled = !readOnly,
-                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80))
-                                    )
-                                    Text("${i}${if(i==1) "st" else "nd"} QTR", fontSize = 9.sp, color = Color.LightGray)
-                                }
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            (3..4).forEach { i ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
-                                    RadioButton(
-                                        selected = qtr == i, 
-                                        onClick = { if (!readOnly) qtr = i }, 
-                                        modifier = Modifier.size(32.dp), 
-                                        enabled = !readOnly,
-                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80))
-                                    )
-                                    Text("${i}${if(i==3) "rd" else "th"} QTR", fontSize = 9.sp, color = Color.LightGray)
-                                }
+                    Row(modifier = Modifier.weight(2f), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        (1..4).forEach { i ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = qtr == i, 
+                                    onClick = { if (!readOnly) qtr = i }, 
+                                    modifier = Modifier.size(24.dp), 
+                                    enabled = !readOnly,
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80))
+                                )
+                                Text("${i}${getOrdinal(i)}", fontSize = 10.sp, color = Color.LightGray)
                             }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 Surface(
                     color = Color.DarkGray.copy(alpha = 0.8f), 
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(4.dp)
                 ) {
-                    Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                        Text("Rating Scale: 3-BEST (Exceeds), 2-PASSED (Meets), 1-FAILED (Below)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Box(Modifier.padding(4.dp), contentAlignment = Alignment.Center) {
+                        Text("Rating: 3-BEST, 2-PASSED, 1-FAILED", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
-                AppraisalFactorItem("I. JOB KNOWLEDGE", "(STATION CERTIFICATION, CROSS TRAINING, 4 STEPS)", rating1, readOnly) { rating1 = it }
-                AppraisalFactorItem("II. QUALITY OF WORK", "(GOLD STANDARD SERVICES, HIGH QUALITY & CONSISTENT)", rating2, readOnly) { rating2 = it }
-                AppraisalFactorItem("III. TEAMWORK", "(TEAM PLAYER, DEPENDABLE, RESPONSIBLE & RESPECTFUL)", rating3, readOnly) { rating3 = it }
-                AppraisalFactorItem("IV. ATTENDANCE & PUNCTUALITY", "(HABITUAL TARDINESS, LEAVES & NOTIFICATION)", rating4, readOnly) { rating4 = it }
-                AppraisalFactorItem("V. PERSONAL HEALTH HYGIENE & GROOMING", "(UNIFORM STANDARDS, CLEANLINESS & GROOMING)", rating5, readOnly) { rating5 = it }
+                Spacer(Modifier.height(8.dp))
+                AppraisalFactorItem("I. JOB KNOWLEDGE", "CERTIFICATION, TRAINING", rating1, readOnly) { rating1 = it }
+                AppraisalFactorItem("II. QUALITY", "SERVICE, CONSISTENCY", rating2, readOnly) { rating2 = it }
+                AppraisalFactorItem("III. TEAMWORK", "DEPENDABLE, RESPECTFUL", rating3, readOnly) { rating3 = it }
+                AppraisalFactorItem("IV. ATTENDANCE", "TARDINESS, NOTIFICATION", rating4, readOnly) { rating4 = it }
+                AppraisalFactorItem("V. GROOMING", "UNIFORM, CLEANLINESS", rating5, readOnly) { rating5 = it }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    Text("SCORE: ", fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("SCORE: ", fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 14.sp)
                     Text(
                         String.format("%.1f", averageScore), 
-                        fontSize = 28.sp, 
+                        fontSize = 22.sp, 
                         fontWeight = FontWeight.Black, 
                         textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
                         color = if (averageScore >= 2.0) Color.Green else Color(0xFFFF8A80)
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = comments,
                     onValueChange = { if (!readOnly) comments = it },
-                    label = { Text("Rater's Overall Comments", color = Color.LightGray) },
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    label = { Text("Comments", color = Color.LightGray, fontSize = 10.sp) },
+                    modifier = Modifier.fillMaxWidth().height(60.dp),
                     readOnly = readOnly,
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White)
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 11.sp)
                 )
             }
         },
         containerColor = Color(0xFF2D2D3A),
         confirmButton = {
-            if (!readOnly) {
-                Button(
-                    onClick = {
-                        onSave(averageScore, comments, rating1, rating2, rating3, rating4, rating5, month, qtr)
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A80)),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                ) { 
-                    Text("Save Appraisal", fontWeight = FontWeight.Bold, color = Color.Black) 
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (!readOnly && onDelete != null) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete", fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                if (!readOnly) {
+                    Button(
+                        onClick = {
+                            onSave(averageScore, comments, rating1, rating2, rating3, rating4, rating5, month, qtr)
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8A80)),
+                        shape = RoundedCornerShape(24.dp)
+                    ) { 
+                        Text("Save Appraisal", fontWeight = FontWeight.Bold, color = Color.Black) 
+                    }
                 }
             }
         },
@@ -9663,25 +9787,31 @@ fun PerformanceAppraisalDialog(
 
 @Composable
 fun AppraisalFactorItem(title: String, subtitle: String, currentRating: Int, readOnly: Boolean = false, onRatingSelected: (Int) -> Unit) {
-    Column(Modifier.padding(vertical = 12.dp)) {
-        Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = Color.White)
-        if (subtitle.isNotEmpty()) Text(subtitle, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, color = Color.White)
+            if (subtitle.isNotEmpty()) Text(subtitle, fontSize = 8.sp, color = Color.Gray)
+        }
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
             (1..3).forEach { r ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 2.dp)
                 ) {
                     RadioButton(
                         selected = currentRating == r, 
                         onClick = { if (!readOnly) onRatingSelected(r) }, 
+                        modifier = Modifier.size(24.dp),
                         enabled = !readOnly,
                         colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF8A80), unselectedColor = Color.Gray)
                     )
-                    Text("$r", fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("$r", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }

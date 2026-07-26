@@ -389,6 +389,11 @@ class SupabaseSyncManager(
                 val records = client.postgrest["requests"].select { filter { eq("employee_id", employeeNo) } }.decodeList<AttendanceRequest>()
                 records.forEach { repository.insertRequest(it.copy(id = 0, employeeId = targetId)) }
             } catch (e: Exception) {}
+            try {
+                repository.deleteAllAppraisalsForEmployee(targetId)
+                val records = client.postgrest["appraisal_records"].select { filter { eq("employeeId", employeeNo) } }.decodeList<AppraisalRecord>()
+                records.forEach { repository.insertAppraisal(it) }
+            } catch (e: Exception) {}
             syncAnnouncements()
         } catch (e: Exception) {
             Log.e("SupabaseSync", "RETRIEVE FAILED for $employeeNo: ${e.message}")
