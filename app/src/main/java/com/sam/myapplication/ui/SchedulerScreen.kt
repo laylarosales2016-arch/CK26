@@ -1097,56 +1097,89 @@ fun AddEmployeeDialog(
     onSave: (Employee, String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
     var selectedEmployee by remember { mutableStateOf<Employee?>(null) }
     var position by remember { mutableStateOf("") }
-    var expandedName by remember { mutableStateOf(false) }
     var expandedPos by remember { mutableStateOf(false) }
     
-    val positions = listOf("Dine In", "DJ", "CIC", "Cashier", "Dispatch", "SO", "Regular", "Fryman", "Noodles", "Assembler", "Backup", "SC", "SS")
-    val filteredEmployees = allEmployees.filter { 
-        (it.isHiddenFromScheduler || (it.position.isNullOrBlank() && it.schedulerPosition.isNullOrBlank())) &&
-        it.position?.lowercase() != "excrew"
+    val positions = listOf("Dine In", "CIC", "DJ", "Dispatch", "Cashier", "SC", "SO", "Regular", "Assembler", "Fryman", "Noodles", "Backup", "SS")
+
+    val filteredEmployees = remember(allEmployees, searchQuery) {
+        allEmployees.filter {
+            val fullName = "${it.firstName} ${it.lastName}".lowercase()
+            it.position?.lowercase() != "excrew" &&
+            (searchQuery.isEmpty() || fullName.contains(searchQuery.lowercase()))
+        }.sortedBy { it.firstName }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Employee to List") },
+        title = { Text("Add Personnel to Schedule") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Name Selection
-                Box {
-                    OutlinedTextField(
-                        value = selectedEmployee?.firstName ?: "",
-                        onValueChange = { },
-                        label = { Text("Select Employee") },
-                        readOnly = true,
-                        trailingIcon = { IconButton(onClick = { expandedName = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    DropdownMenu(expanded = expandedName, onDismissRequest = { expandedName = false }) {
-                        filteredEmployees.forEach { emp ->
-                            DropdownMenuItem(
-                                text = { Text("${emp.firstName} ${emp.lastName}") },
-                                onClick = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Search and Select Employee
+                Text("Select Personnel:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    singleLine = true
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .border(1.dp, Color.LightGray, MaterialTheme.shapes.medium)
+                ) {
+                    items(filteredEmployees) { emp ->
+                        val isSelected = selectedEmployee?.id == emp.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
                                     selectedEmployee = emp
-                                    position = emp.position ?: ""
-                                    expandedName = false
+                                    if (position.isEmpty()) position = emp.position ?: ""
                                 }
+                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.Person,
+                                contentDescription = null,
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = "${emp.firstName} ${emp.lastName}",
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                             )
                         }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp), thickness = 0.5.dp)
                     }
                 }
 
                 // Position Selection
+                Text("Assign Station:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Box {
                     OutlinedTextField(
                         value = position,
                         onValueChange = { position = it },
-                        label = { Text("Position") },
+                        label = { Text("Station / Position") },
                         trailingIcon = { IconButton(onClick = { expandedPos = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
-                    DropdownMenu(expanded = expandedPos, onDismissRequest = { expandedPos = false }) {
+                    DropdownMenu(
+                        expanded = expandedPos,
+                        onDismissRequest = { expandedPos = false },
+                        modifier = Modifier.fillMaxWidth(0.7f)
+                    ) {
                         positions.forEach { pos ->
                             DropdownMenuItem(
                                 text = { Text(pos) },
@@ -1161,14 +1194,20 @@ fun AddEmployeeDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { 
-                selectedEmployee?.let { onSave(it, position) }
-            }, enabled = selectedEmployee != null && position.isNotBlank()) {
-                Text("Add")
+            Button(
+                onClick = {
+                    selectedEmployee?.let { onSave(it, position) }
+                },
+                enabled = selectedEmployee != null && position.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Add to Schedule")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancel")
+            }
         }
     )
 }
