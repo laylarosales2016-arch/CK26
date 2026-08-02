@@ -16,7 +16,8 @@ data class EmployeeSchedule(
     @SerialName("font_color") val fontColor: Int? = null,
     val position: String? = null,
     @SerialName("scheduler_order") val schedulerOrder: Int? = null,
-    @SerialName("employee_name") val employeeName: String? = null
+    @SerialName("employee_name") val employeeName: String? = null,
+    val superscript: String? = null
 )
 
 @Entity(tableName = "shift_templates")
@@ -27,5 +28,6 @@ data class ShiftTemplate(
     @SerialName("font_color") val fontColor: Int? = null,
     val position: String? = null,
     @SerialName("scheduler_order") val schedulerOrder: Int? = null,
-    @SerialName("employee_name") val employeeName: String? = null
+    @SerialName("employee_name") val employeeName: String? = null,
+    val superscript: String? = null
 )

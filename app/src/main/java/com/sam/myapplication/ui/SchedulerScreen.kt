@@ -1067,13 +1067,24 @@ fun EmployeeScheduleRow(
                         .padding(if (isLandscape) 1.dp else 2.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = schedule?.scheduleText ?: (if (schedule?.tag != "HIDDEN") schedule?.tag else "") ?: "",
-                        fontSize = if (isLandscape) 8.sp else 10.sp,
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold,
-                        color = boxFontColor
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        if (!schedule?.superscript.isNullOrBlank()) {
+                            Text(
+                                text = schedule!!.superscript!!,
+                                fontSize = if (isLandscape) 6.sp else 7.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = boxFontColor.copy(alpha = 0.7f),
+                                lineHeight = if (isLandscape) 6.sp else 7.sp
+                            )
+                        }
+                        Text(
+                            text = schedule?.scheduleText ?: (if (schedule?.tag != "HIDDEN") schedule?.tag else "") ?: "",
+                            fontSize = if (isLandscape) 8.sp else 10.sp,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
+                            color = boxFontColor
+                        )
+                    }
                 }
             }
         }
@@ -1238,6 +1249,40 @@ fun ScheduleEditDialog(
                                     shape = androidx.compose.foundation.shape.CircleShape
                                 )
                                 .clickable { selectedColor = color }
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text("Mini Tag / Superscript:", fontWeight = FontWeight.Bold)
+                var superText by remember { mutableStateOf(currentSchedule?.superscript ?: "") }
+                
+                OutlinedTextField(
+                    value = superText,
+                    onValueChange = { 
+                        superText = it
+                        if (currentSchedule != null) {
+                            onSave(currentSchedule.copy(superscript = it))
+                        }
+                    },
+                    label = { Text("e.g. RTF, DP, CA, DJ") },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    singleLine = true
+                )
+
+                Row(modifier = Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("RTF", "DP", "CA", "DJ").forEach { tag ->
+                        AssistChip(
+                            onClick = { 
+                                superText = tag
+                                if (currentSchedule != null) {
+                                    onSave(currentSchedule.copy(superscript = tag))
+                                } else {
+                                    // If no schedule exists yet, create one with just the superscript
+                                    onSave(EmployeeSchedule(employee.id, date.toString(), superscript = tag))
+                                }
+                            },
+                            label = { Text(tag, fontSize = 10.sp) }
                         )
                     }
                 }

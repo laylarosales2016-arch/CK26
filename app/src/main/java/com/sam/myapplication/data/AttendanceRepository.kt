@@ -220,7 +220,8 @@ class AttendanceRepository(
                 fontColor = if (schedule.fontColor != null) schedule.fontColor else existing.fontColor,
                 position = if (schedule.position != null) schedule.position else existing.position,
                 schedulerOrder = if (schedule.schedulerOrder != null) schedule.schedulerOrder else existing.schedulerOrder,
-                employeeName = if (schedule.employeeName != null) schedule.employeeName else existing.employeeName
+                employeeName = if (schedule.employeeName != null) schedule.employeeName else existing.employeeName,
+                superscript = if (schedule.superscript != null) schedule.superscript else existing.superscript
             )
             scheduleDao.insertSchedule(merged)
         } else {

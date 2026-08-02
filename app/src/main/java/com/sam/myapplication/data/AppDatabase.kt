@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Employee::class, AttendanceRecord::class, AttendanceRequest::class, Announcement::class, DailyTimeRecord::class, ChatMessage::class, DailySummaryNote::class, WorkPermit::class, AttritionRecord::class, DARecord::class, ActivityLog::class, EmployeeSchedule::class, ShiftTemplate::class, AppraisalRecord::class], version = 49, exportSchema = false)
+@Database(entities = [Employee::class, AttendanceRecord::class, AttendanceRequest::class, Announcement::class, DailyTimeRecord::class, ChatMessage::class, DailySummaryNote::class, WorkPermit::class, AttritionRecord::class, DARecord::class, ActivityLog::class, EmployeeSchedule::class, ShiftTemplate::class, AppraisalRecord::class], version = 50, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun employeeDao(): EmployeeDao
