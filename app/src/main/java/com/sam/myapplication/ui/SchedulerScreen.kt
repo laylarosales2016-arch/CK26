@@ -325,9 +325,12 @@ fun SchedulerScreen(
                                 
                                 val isPosMatch = (effectivePos == pos || emp.department == pos)
                                 if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
-                                val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
-                                isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
+                                
+                                val hasAnyRecordThisWeek = allSchedules.any { s -> 
+                                    s.employeeId == emp.id && s.date in weekDates.map { it.toString() } 
+                                }
+                                
+                                isPosMatch && hasAnyRecordThisWeek
                             }.sortedWith(compareBy({ 
                                 val mDate = weekDates[0].toString()
                                 allSchedules.find { s -> s.employeeId == it.id && s.date == mDate }?.schedulerOrder ?: it.schedulerOrder 
@@ -392,9 +395,12 @@ fun SchedulerScreen(
 
                                 val isPosMatch = (effectivePos == pos || emp.department == pos)
                                 if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
-                                val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                                val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
-                                isPosMatch && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
+
+                                val hasAnyRecordThisWeek = allSchedules.any { s -> 
+                                    s.employeeId == emp.id && s.date in weekDates.map { it.toString() } 
+                                }
+                                
+                                isPosMatch && hasAnyRecordThisWeek
                             }.sortedWith(compareBy({ 
                                 val mDate = weekDates[0].toString()
                                 allSchedules.find { s -> s.employeeId == it.id && s.date == mDate }?.schedulerOrder ?: it.schedulerOrder 
@@ -442,9 +448,12 @@ fun SchedulerScreen(
 
                             val isOtherPos = effectivePos !in combinedOther && emp.department !in combinedOther
                             if (effectivePos?.lowercase() in excluded || emp.department?.lowercase() in excluded) return@filter false
-                            val hasActualSchedule = allSchedules.any { s -> s.employeeId == emp.id && s.date in weekDates.map { it.toString() } && s.tag != "HIDDEN" }
-                            val isHiddenThisWeek = allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" }
-                            isOtherPos && (hasActualSchedule || (!emp.isHiddenFromScheduler && !isHiddenThisWeek))
+                            
+                            val hasAnyRecordThisWeek = allSchedules.any { s -> 
+                                s.employeeId == emp.id && s.date in weekDates.map { it.toString() } 
+                            }
+                            
+                            isOtherPos && hasAnyRecordThisWeek
                         }.sortedWith(compareBy({ 
                             val mondayDate = weekDates[0].toString()
                             allSchedules.find { s -> s.employeeId == it.id && s.date == mondayDate }?.schedulerOrder ?: it.schedulerOrder 
@@ -578,7 +587,14 @@ fun SchedulerScreen(
         AddEmployeeDialog(
             allEmployees = allEmployees,
             onSave = { employee, position ->
-                viewModel.updateEmployee(context, employee.copy(schedulerPosition = position, isHiddenFromScheduler = false))
+                val mondayDate = weekDates[0].toString()
+                viewModel.saveSchedule(EmployeeSchedule(
+                    employeeId = employee.id,
+                    date = mondayDate,
+                    position = position,
+                    employeeName = employee.firstName,
+                    schedulerOrder = 0
+                ))
                 showAddEmployeeDialog = false
             },
             onDismiss = { showAddEmployeeDialog = false }
