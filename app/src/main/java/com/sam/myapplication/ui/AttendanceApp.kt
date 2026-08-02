@@ -194,23 +194,24 @@ fun Int.s(): Dp = (this * LocalScale.current).dp
 fun Int.spS(): TextUnit = (this * LocalScale.current).sp
 
 fun getPositionRank(pos: String?): Int {
-    return when (pos) {
-        "Coordinator" -> 1
-        "Team Leader" -> 2
-        "Cashier" -> 3
-        "Dispatch" -> 4
-        "SS" -> 5
-        "CIC" -> 6
-        "Assembler" -> 7
-        "Noodle", "Noodles" -> 8
-        "Backup" -> 9
-        "Fyer", "Fryer" -> 10
-        "DJ" -> 11
-        "Manager" -> 12
-        "Assistant Manager" -> 13
-        "Senior Crew" -> 14
-        "Administrator" -> 15
-        "Excrew" -> 1000
+    val p = (pos ?: "").trim()
+    return when {
+        p.equals("Coordinator", ignoreCase = true) -> 1
+        p.equals("Team Leader", ignoreCase = true) -> 2
+        p.equals("Cashier", ignoreCase = true) -> 3
+        p.equals("Dispatch", ignoreCase = true) -> 4
+        p.equals("SS", ignoreCase = true) -> 5
+        p.equals("CIC", ignoreCase = true) -> 6
+        p.equals("Assembler", ignoreCase = true) -> 7
+        p.equals("Noodle", ignoreCase = true) || p.equals("Noodles", ignoreCase = true) -> 8
+        p.equals("Backup", ignoreCase = true) -> 9
+        p.equals("Fyer", ignoreCase = true) || p.equals("Fryer", ignoreCase = true) || p.equals("Fryman", ignoreCase = true) -> 10
+        p.equals("DJ", ignoreCase = true) -> 11
+        p.equals("Manager", ignoreCase = true) -> 12
+        p.equals("Assistant Manager", ignoreCase = true) -> 13
+        p.equals("Senior Crew", ignoreCase = true) -> 14
+        p.equals("Administrator", ignoreCase = true) -> 15
+        p.contains("Excrew", ignoreCase = true) -> 1000
         else -> 999
     }
 }
@@ -1084,22 +1085,36 @@ fun EmployeeListScreen(
     val targetHeadcount by viewModel.targetHeadcount.collectAsState()
     val excludedIds by viewModel.excludedFromHeadcountIds.collectAsState()
     
-    val excludedPositions = listOf("Coordinator", "Excrew", "Assistant Manager", "Senior Crew", "Manager")
+    val excludedPositions = listOf("Coordinator", "Excrew", "Assistant Manager", "Senior Crew", "Manager", "Administrator")
+    val excludedNames = listOf("admin Fusion", "Chowking SM Clark")
     
-    val headcount = remember(employees, excludedIds) {
-        employees.count { 
-            !it.id.contains("#") && 
-            it.isAdmin != true && 
-            !excludedPositions.contains(it.position) &&
-            !excludedIds.contains(it.id)
+    val activeCrewList = remember(employees) {
+        employees.filter { emp ->
+            val pos = (emp.position ?: "").lowercase()
+            val fullName = "${emp.firstName ?: ""} ${emp.lastName ?: ""}".lowercase()
+            
+            !pos.contains("excrew") && 
+            !excludedPositions.any { pos.contains(it.lowercase()) } &&
+            !excludedNames.any { fullName.contains(it.lowercase()) }
         }
+    }
+    
+    val headcount = remember(activeCrewList, excludedIds) {
+        activeCrewList.count { !excludedIds.contains(it.id) }
     }
 
     var showExcrew by rememberSaveable { mutableStateOf(false) }
 
-    val sortedEmployees = remember(employees, showExcrew) {
-        employees.filter { if (!showExcrew) it.position != "Excrew" else true }
-            .sortedWith(compareBy({ getPositionRank(it.position) }, { it.firstName ?: "" }))
+    val sortedEmployees = remember(activeCrewList, employees, showExcrew) {
+        if (showExcrew) {
+            employees.filter { emp ->
+                val pos = (emp.position ?: "").lowercase()
+                val fullName = "${emp.firstName ?: ""} ${emp.lastName ?: ""}".lowercase()
+                pos.contains("excrew") && !fullName.contains("marcyl maquiling")
+            }.sortedWith(compareBy({ getPositionRank(it.position) }, { it.firstName ?: "" }))
+        } else {
+            activeCrewList.sortedWith(compareBy({ getPositionRank(it.position) }, { it.firstName ?: "" }))
+        }
     }
     val groupedEmployees = remember(sortedEmployees) {
         sortedEmployees.groupBy { it.position ?: "Unassigned" }
