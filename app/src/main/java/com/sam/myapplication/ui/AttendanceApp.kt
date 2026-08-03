@@ -1085,7 +1085,7 @@ fun EmployeeListScreen(
     val targetHeadcount by viewModel.targetHeadcount.collectAsState()
     val excludedIds by viewModel.excludedFromHeadcountIds.collectAsState()
     
-    val excludedPositions = listOf("Coordinator", "Excrew", "Assistant Manager", "Senior Crew", "Manager", "Administrator")
+    val excludedPositions = listOf("Excrew")
     val excludedNames = listOf("admin Fusion", "Chowking SM Clark")
     
     val activeCrewList = remember(employees) {
@@ -1100,7 +1100,11 @@ fun EmployeeListScreen(
     }
     
     val headcount = remember(activeCrewList, excludedIds) {
-        activeCrewList.count { !excludedIds.contains(it.id) }
+        val headcountExcludedPositions = listOf("manager", "assistant manager", "senior crew")
+        activeCrewList.count { emp -> 
+            !excludedIds.contains(emp.id) && 
+            !headcountExcludedPositions.any { emp.position?.lowercase()?.contains(it) == true }
+        }
     }
 
     var showExcrew by rememberSaveable { mutableStateOf(false) }
@@ -1356,10 +1360,12 @@ fun EmployeeListScreen(
                     Spacer(Modifier.height(16.dp))
                     Text("Select Employees to Exclude from count:", style = MaterialTheme.typography.labelMedium)
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        val headcountExcludedPositions = listOf("manager", "assistant manager", "senior crew")
                         items(sortedEmployees.filter { 
                             !it.id.contains("#") && 
                             it.id != "fusion" && it.id != "chowking" &&
-                            !excludedPositions.contains(it.position)
+                            !excludedPositions.contains(it.position) &&
+                            !headcountExcludedPositions.any { pos -> it.position?.lowercase()?.contains(pos) == true }
                         }) { emp ->
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable { viewModel.toggleHeadcountExclusion(emp.id) },
@@ -9539,7 +9545,7 @@ fun PerformanceAppraisalPicker(
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val excludedPositions = listOf("Manager", "Senior Crew", "Excrew", "Assistant Manager", "Administrator")
+    val excludedPositions = listOf("Excrew")
     val filtered = remember(employees, searchQuery) {
         employees.filter { 
             (it.firstName?.contains(searchQuery, ignoreCase = true) == true || 

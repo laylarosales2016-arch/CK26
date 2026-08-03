@@ -873,13 +873,31 @@ class SupabaseSyncManager(
     suspend fun downloadSchedules() {
         try {
             val employees = repository.allEmployees.first()
-            val remoteSchedules = client.postgrest["employee_schedules"].select().decodeList<EmployeeSchedule>()
-            remoteSchedules.forEach { remoteSched ->
-                val emp = employees.find { it.id == remoteSched.employeeId }
-                    ?: employees.find { it.employeeNo == remoteSched.employeeId }
-                val localId = emp?.id ?: remoteSched.employeeId
-                repository.insertSchedule(remoteSched.copy(employeeId = localId))
+            var offset = 0
+            val limit = 1000
+            var hasMore = true
+            
+            while (hasMore) {
+                val remoteSchedules = client.postgrest["employee_schedules"]
+                    .select {
+                        range(offset.toLong(), (offset + limit - 1).toLong())
+                    }
+                    .decodeList<EmployeeSchedule>()
+                
+                remoteSchedules.forEach { remoteSched ->
+                    val emp = employees.find { it.id == remoteSched.employeeId }
+                        ?: employees.find { it.employeeNo == remoteSched.employeeId }
+                    val localId = emp?.id ?: remoteSched.employeeId
+                    repository.insertSchedule(remoteSched.copy(employeeId = localId))
+                }
+                
+                if (remoteSchedules.size < limit) {
+                    hasMore = false
+                } else {
+                    offset += limit
+                }
             }
+            Log.d("SupabaseSyncManager", "Downloaded all schedules successfully")
         } catch (e: Exception) {
             Log.e("SupabaseSyncManager", "Failed to download schedules: ${e.message}")
         }
