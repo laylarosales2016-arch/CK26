@@ -161,6 +161,11 @@ class SupabaseSyncManager(
                 put("scheduler_font_color", JsonPrimitive(emp.schedulerFontColor))
                 put("scheduler_order", JsonPrimitive(emp.schedulerOrder))
                 
+                // DISCIPLINARY OFFENCE LEVELS
+                put("late_offence_level", JsonPrimitive(emp.lateOffenceLevel ?: 0))
+                put("absent_offence_level", JsonPrimitive(emp.absentOffenceLevel ?: 0))
+                put("hampering_offence_level", JsonPrimitive(emp.hamperingOffenceLevel ?: 0))
+                
                 // Handle list serialization explicitly
                 put("custom_offences", json.encodeToJsonElement(emp.customOffences ?: emptyList<CustomOffence>()))
                 put("certified_positions", json.encodeToJsonElement(emp.certifiedPositions ?: emptyList<String>()))

@@ -42,6 +42,8 @@ data class Employee(
     @SerialName("uniform_apron") val uniformApron: Int? = 0,
     @SerialName("uniform_shirt") val uniformShirt: Int? = 0,
     @SerialName("uniform_pants") val uniformPants: Int? = 0,
+    @SerialName("shirt_size") val shirtSize: String? = "",
+    @SerialName("pants_size") val pantsSize: String? = "",
     @SerialName("is_certified") val isCertified: Boolean? = false,
     @SerialName("certified_positions") val certifiedPositions: List<String>? = emptyList(),
     @SerialName("password_hash") val passwordHash: String? = null,

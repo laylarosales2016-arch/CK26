@@ -1075,6 +1075,8 @@ class AttendanceViewModel(
                                 "Apron" -> employee.copy(uniformApron = value.toIntOrNull() ?: employee.uniformApron)
                                 "Shirt" -> employee.copy(uniformShirt = value.toIntOrNull() ?: employee.uniformShirt)
                                 "Pants" -> employee.copy(uniformPants = value.toIntOrNull() ?: employee.uniformPants)
+                                "Shirt Size" -> employee.copy(shirtSize = value)
+                                "Pants Size" -> employee.copy(pantsSize = value)
                                 "Resign Date" -> employee.copy(resignationDate = value, isResigned = true)
                                 "Payroll Access" -> employee.copy(payrollAccessCode = value)
                                 "Payroll User" -> employee.copy(payrollUsername = value)

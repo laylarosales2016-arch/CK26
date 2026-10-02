@@ -1811,6 +1811,10 @@ fun EmployeeListScreen(
                         }
                     }
 
+                    IconButton(onClick = onSchedulerClick) {
+                        Icon(Icons.Default.Schedule, contentDescription = "Deployment Grid", modifier = Modifier.size(20.s()))
+                    }
+
                     IconButton(onClick = { showDailySummaryManager = true }) {
                         Icon(Icons.Default.CalendarToday, contentDescription = "Daily Summary", modifier = Modifier.size(20.s()))
                     }
@@ -1918,6 +1922,14 @@ fun EmployeeListScreen(
                                                 showRequestManager = true
                                             },
                                             leadingIcon = { Icon(Icons.Default.Notifications, null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Terminal Chat (Global)") },
+                                            onClick = {
+                                                showMenu = false
+                                                onChatClick()
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.Groups, null) }
                                         )
                                         DropdownMenuItem(
                                             text = { Text(if (showExcrew) "Hide Excrew" else "View Excrew") },
@@ -4310,12 +4322,50 @@ fun EmployeeDetailScreen(
                 onDismissRequest = { editingField = null },
                 title = { Text("Update $editingField") },
                 text = {
-                    OutlinedTextField(
-                        value = editingValue,
-                        onValueChange = { editingValue = it },
-                        label = { Text("New $editingField") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (editingField == "Shirt Size" || editingField == "Pants Size") {
+                        val uniformSizes = listOf(
+                            "Female Small", "Female Medium", "Female Large", "Female Xlarge",
+                            "Male Small", "Male Medium", "Male Large", "Male Xlarge"
+                        )
+                        var dropdownExpanded by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = dropdownExpanded,
+                            onExpandedChange = { dropdownExpanded = !dropdownExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = editingValue,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Select Size") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false }
+                            ) {
+                                uniformSizes.forEach { selectionOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(selectionOption) },
+                                        onClick = {
+                                            editingValue = selectionOption
+                                            dropdownExpanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        OutlinedTextField(
+                            value = editingValue,
+                            onValueChange = { editingValue = it },
+                            label = { Text("New $editingField") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(onClick = {
@@ -4338,6 +4388,8 @@ fun EmployeeDetailScreen(
                                 "Apron" -> employee.copy(uniformApron = editingValue.toIntOrNull() ?: employee.uniformApron)
                                 "Shirt" -> employee.copy(uniformShirt = editingValue.toIntOrNull() ?: employee.uniformShirt)
                                 "Pants" -> employee.copy(uniformPants = editingValue.toIntOrNull() ?: employee.uniformPants)
+                                "Shirt Size" -> employee.copy(shirtSize = editingValue)
+                                "Pants Size" -> employee.copy(pantsSize = editingValue)
                                 "Marital Status" -> employee.copy(maritalStatus = editingValue)
                                 "Emergency Contact" -> employee.copy(emergencyContactName = editingValue)
                                 "Relationship" -> employee.copy(emergencyContactRelationship = editingValue)
@@ -5245,30 +5297,47 @@ fun EmployeeDetailScreen(
 
                     SectionHeader("Uniform Inventory")
                     InfoCard {
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            UniformStatusItem(
-                                "Cap", 
-                                employee?.uniformCap ?: 0,
+                        Column {
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                UniformStatusItem(
+                                    "Cap", 
+                                    employee?.uniformCap ?: 0,
+                                    showEditIcon = isEditMode,
+                                    onEdit = { editingField = "Cap"; editingValue = (employee?.uniformCap ?: 0).toString() }
+                                )
+                                UniformStatusItem(
+                                    "Apron", 
+                                    employee?.uniformApron ?: 0,
+                                    showEditIcon = isEditMode,
+                                    onEdit = { editingField = "Apron"; editingValue = (employee?.uniformApron ?: 0).toString() }
+                                )
+                                UniformStatusItem(
+                                    "Shirt", 
+                                    employee?.uniformShirt ?: 0,
+                                    showEditIcon = isEditMode,
+                                    onEdit = { editingField = "Shirt"; editingValue = (employee?.uniformShirt ?: 0).toString() }
+                                )
+                                UniformStatusItem(
+                                    "Pants", 
+                                    employee?.uniformPants ?: 0,
+                                    showEditIcon = isEditMode,
+                                    onEdit = { editingField = "Pants"; editingValue = (employee?.uniformPants ?: 0).toString() }
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                            DetailItem(
+                                Icons.Default.Work,
+                                "Shirt Size",
+                                if (employee?.shirtSize.isNullOrBlank()) "Not specified" else employee!!.shirtSize!!,
                                 showEditIcon = isEditMode,
-                                onEdit = { editingField = "Cap"; editingValue = (employee?.uniformCap ?: 0).toString() }
+                                onEdit = { editingField = "Shirt Size"; editingValue = employee?.shirtSize ?: "" }
                             )
-                            UniformStatusItem(
-                                "Apron", 
-                                employee?.uniformApron ?: 0,
+                            DetailItem(
+                                Icons.Default.Work,
+                                "Pants Size",
+                                if (employee?.pantsSize.isNullOrBlank()) "Not specified" else employee!!.pantsSize!!,
                                 showEditIcon = isEditMode,
-                                onEdit = { editingField = "Apron"; editingValue = (employee?.uniformApron ?: 0).toString() }
-                            )
-                            UniformStatusItem(
-                                "Shirt", 
-                                employee?.uniformShirt ?: 0,
-                                showEditIcon = isEditMode,
-                                onEdit = { editingField = "Shirt"; editingValue = (employee?.uniformShirt ?: 0).toString() }
-                            )
-                            UniformStatusItem(
-                                "Pants", 
-                                employee?.uniformPants ?: 0,
-                                showEditIcon = isEditMode,
-                                onEdit = { editingField = "Pants"; editingValue = (employee?.uniformPants ?: 0).toString() }
+                                onEdit = { editingField = "Pants Size"; editingValue = employee?.pantsSize ?: "" }
                             )
                         }
                     }
@@ -6242,6 +6311,8 @@ fun AddEmployeeScreen(
     var uniformApron by remember { mutableStateOf("0") }
     var uniformShirt by remember { mutableStateOf("0") }
     var uniformPants by remember { mutableStateOf("0") }
+    var shirtSize by remember { mutableStateOf("") }
+    var pantsSize by remember { mutableStateOf("") }
     var isCertified by remember { mutableStateOf(false) }
     var certifiedPositions by remember { mutableStateOf(emptyList<String>()) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -6637,6 +6708,75 @@ fun AddEmployeeScreen(
                 OutlinedTextField(value = uniformPants, onValueChange = { uniformPants = it }, label = { Text("Pants") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
 
+            val uniformSizes = listOf(
+                "Female Small", "Female Medium", "Female Large", "Female Xlarge",
+                "Male Small", "Male Medium", "Male Large", "Male Xlarge"
+            )
+
+            var shirtSizeExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = shirtSizeExpanded,
+                onExpandedChange = { shirtSizeExpanded = !shirtSizeExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = shirtSize,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Shirt Size") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = shirtSizeExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+                ExposedDropdownMenu(
+                    expanded = shirtSizeExpanded,
+                    onDismissRequest = { shirtSizeExpanded = false }
+                ) {
+                    uniformSizes.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                shirtSize = selectionOption
+                                shirtSizeExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+
+            var pantsSizeExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = pantsSizeExpanded,
+                onExpandedChange = { pantsSizeExpanded = !pantsSizeExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = pantsSize,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Pants Size") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pantsSizeExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+                ExposedDropdownMenu(
+                    expanded = pantsSizeExpanded,
+                    onDismissRequest = { pantsSizeExpanded = false }
+                ) {
+                    uniformSizes.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                pantsSize = selectionOption
+                                pantsSizeExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -6775,6 +6915,8 @@ fun AddEmployeeScreen(
                                 uniformApron = uniformApron.toIntOrNull() ?: 0,
                                 uniformShirt = uniformShirt.toIntOrNull() ?: 0,
                                 uniformPants = uniformPants.toIntOrNull() ?: 0,
+                                shirtSize = shirtSize,
+                                pantsSize = pantsSize,
                                 isCertified = isCertified,
                                 certifiedPositions = certifiedPositions,
                                 isAdmin = isAdmin,
@@ -6851,6 +6993,8 @@ fun EditEmployeeScreen(
         var uniformApron by remember { mutableStateOf(employee.uniformApron?.toString() ?: "0") }
         var uniformShirt by remember { mutableStateOf(employee.uniformShirt?.toString() ?: "0") }
         var uniformPants by remember { mutableStateOf(employee.uniformPants?.toString() ?: "0") }
+        var shirtSize by remember { mutableStateOf(employee.shirtSize ?: "") }
+        var pantsSize by remember { mutableStateOf(employee.pantsSize ?: "") }
         var isCertified by remember { mutableStateOf(employee.isCertified == true) }
         var certifiedPositions by remember { mutableStateOf(employee.certifiedPositions ?: emptyList<String>()) }
         var isAdmin by remember { mutableStateOf(employee.isAdmin == true) }
@@ -7252,6 +7396,75 @@ fun EditEmployeeScreen(
                     OutlinedTextField(value = uniformPants, onValueChange = { uniformPants = it }, label = { Text("Pants") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
 
+                val uniformSizes = listOf(
+                    "Female Small", "Female Medium", "Female Large", "Female Xlarge",
+                    "Male Small", "Male Medium", "Male Large", "Male Xlarge"
+                )
+
+                var shirtSizeExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = shirtSizeExpanded,
+                    onExpandedChange = { shirtSizeExpanded = !shirtSizeExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = shirtSize,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Shirt Size") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = shirtSizeExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = shirtSizeExpanded,
+                        onDismissRequest = { shirtSizeExpanded = false }
+                    ) {
+                        uniformSizes.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    shirtSize = selectionOption
+                                    shirtSizeExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+
+                var pantsSizeExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = pantsSizeExpanded,
+                    onExpandedChange = { pantsSizeExpanded = !pantsSizeExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = pantsSize,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Pants Size") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pantsSizeExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = pantsSizeExpanded,
+                        onDismissRequest = { pantsSizeExpanded = false }
+                    ) {
+                        uniformSizes.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    pantsSize = selectionOption
+                                    pantsSizeExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -7390,6 +7603,8 @@ fun EditEmployeeScreen(
                                     uniformApron = uniformApron.toIntOrNull() ?: 0,
                                     uniformShirt = uniformShirt.toIntOrNull() ?: 0,
                                     uniformPants = uniformPants.toIntOrNull() ?: 0,
+                                    shirtSize = shirtSize,
+                                    pantsSize = pantsSize,
                                     isCertified = isCertified,
                                     certifiedPositions = certifiedPositions,
                                 isAdmin = isAdmin,
