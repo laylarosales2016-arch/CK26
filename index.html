@@ -6,6 +6,17 @@
     <title>Chowking Attendance Summary | Cosmic Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://uhmjgnwpzsemksxcjpiz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWpnbndwenNlbWtzeGNqcGl6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODMyNDU2NCwiZXhwIjoyMDkzOTAwNTY0fQ.SVdNjQlocvBEwwxl2K_7BMT94vUq5fkNRev65fXrvyc';
+        try {
+            const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            window.sb = sb;
+            console.log("Supabase uplink established.");
+        } catch (e) {
+            console.error("Failed to initialize Supabase:", e);
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -184,7 +195,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            width: 75px; /* Reduced from 100px */
+            width: 75px;
         }
         .sched-header-unit {
             border: 2px solid #000000;
@@ -273,7 +284,7 @@
     <div class="relative mb-6 text-left">
         <label class="text-[10px] font-black text-cyan-400 uppercase tracking-widest ml-4 mb-2 block">System Password</label>
         <div class="relative">
-            <input type="password" id="sys-pass" onkeydown="if(event.key==='Enter') checkAuth()" placeholder="••••••••" class="bg-space-950/80 border border-white/10 text-white rounded-xl px-6 py-4 pr-12 font-semibold text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full shadow-inner">
+            <input type="password" id="sys-pass" onkeydown="if(event.key==='Enter') checkAuth()" placeholder="��������" class="bg-space-950/80 border border-white/10 text-white rounded-xl px-6 py-4 pr-12 font-semibold text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full shadow-inner">
             <button onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-space-400 hover:text-cyan-400 transition-colors">
                 <i id="toggle-icon" class="fa-solid fa-eye"></i>
             </button>
@@ -283,6 +294,7 @@
 
     <button onclick="checkAuth()" id="login-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-[0.2em] py-4 rounded-xl transition-all shadow-lg active:scale-95 shadow-cyan-500/10">Establish Uplink</button>
 </div>
+
 
 <!-- Personal Vault -->
 <div id="personal-vault-container" class="hidden w-full max-w-4xl mx-auto py-4">
@@ -300,7 +312,7 @@
             </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
-            <button id="v-msg-btn" onclick="openPrivateChat(currentVaultEmp?.employee_no)" class="hidden bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 p-3 rounded-2xl font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all flex flex-col items-center justify-center gap-1.5 h-16 w-full lg:w-28 shadow-lg shadow-cyan-500/5">
+            <button id="v-msg-btn" onclick="openPrivateChat(currentVaultEmp ? currentVaultEmp.employee_no : null)" class="hidden bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 p-3 rounded-2xl font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all flex flex-col items-center justify-center gap-1.5 h-16 w-full lg:w-28 shadow-lg shadow-cyan-500/5">
                 <i class="fa-solid fa-message text-sm"></i>
                 <span class="text-center leading-tight">Send Message</span>
             </button>
@@ -377,9 +389,12 @@
                     <div><span class="info-label">Account Number</span><p id="v-bank-acc" class="info-value font-mono text-cyan-400/80">---</p></div>
                 </div>
             </div>
-            <div id="v-da-card" class="glass-card p-5 md:p-6 rounded-3xl border-rose-500/20 hidden">
-                <h3 class="section-title"><i class="fa-solid fa-circle-exclamation text-rose-400"></i> Disciplinary Standing</h3>
-                <div id="v-da-list" class="space-y-4"></div>
+            <div id="v-da-card" class="bg-[#5a1a1a] border border-rose-500/10 p-6 rounded-3xl hidden mt-4 shadow-xl">
+                <h3 class="text-white font-bold text-sm mb-4 flex items-center gap-3">
+                    <i class="fa-solid fa-clock-rotate-left text-rose-300"></i>
+                    Active Disciplinary Actions
+                </h3>
+                <div id="v-da-list" class="space-y-2 text-rose-100/90 text-[11px] font-medium"></div>
             </div>
         </div>
         <div class="space-y-4 md:space-y-6">
@@ -389,12 +404,18 @@
                 <div id="v-cert" class="px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest text-center">Uncertified</div>
             </div>
             <div class="glass-card p-5 md:p-6 rounded-3xl">
-                <h3 class="section-title"><i class="fa-solid fa-shirt"></i> Allocation Units</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Cap</span><p id="v-cap" class="info-value">0</p></div>
-                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Apron</span><p id="v-apron" class="info-value">0</p></div>
-                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt</span><p id="v-shirt" class="info-value">0</p></div>
-                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants</span><p id="v-pants" class="info-value">0</p></div>
+                <h3 class="section-title"><i class="fa-solid fa-shirt"></i> Allocation Units & Sizes</h3>
+                <div id="v-allocation-container">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Cap</span><p id="v-cap" class="info-value">0</p></div>
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Apron</span><p id="v-apron" class="info-value">0</p></div>
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt</span><p id="v-shirt" class="info-value">0</p></div>
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants</span><p id="v-pants" class="info-value">0</p></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt Size</span><p id="v-shirt-size" class="info-value text-xs text-cyan-400 font-bold">---</p></div>
+                        <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants Size</span><p id="v-pants-size" class="info-value text-xs text-cyan-400 font-bold">---</p></div>
+                    </div>
                 </div>
             </div>
             <div class="glass-card p-5 md:p-6 rounded-3xl border-rose-500/20">
@@ -410,7 +431,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="info-label">New Portal Password</label>
-                        <input type="password" id="v-new-pass" placeholder="••••••••" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-semibold text-sm outline-none focus:ring-1 focus:ring-cyan-500 w-full mb-3">
+                        <input type="password" id="v-new-pass" placeholder="��������" class="bg-space-950/80 border border-white/10 text-white rounded-lg px-4 py-2 font-semibold text-sm outline-none focus:ring-1 focus:ring-cyan-500 w-full mb-3">
                         <button onclick="updatePortalPassword()" id="btn-update-pass" class="w-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">Update Key</button>
                         <p id="v-pass-msg" class="text-[8px] font-bold uppercase mt-2 hidden"></p>
                     </div>
@@ -651,6 +672,16 @@
                 <label class="info-label">Weekly Order / Rank</label>
                 <input type="number" id="sched-order-input" class="bg-space-950 border border-white/10 text-white rounded-lg px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500" placeholder="Sort order...">
             </div>
+            <div>
+                <label class="info-label">Mini Tag / Superscript</label>
+                <input type="text" id="sched-super-input" class="bg-space-950 border border-white/10 text-white rounded-lg px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500" placeholder="RTF, DP, CA, DJ...">
+                <div class="flex gap-1 mt-2">
+                    <button onclick="document.getElementById('sched-super-input').value='RTF'" class="bg-white/5 border border-white/10 text-[8px] text-space-400 px-2 py-1 rounded hover:bg-white/10">RTF</button>
+                    <button onclick="document.getElementById('sched-super-input').value='DP'" class="bg-white/5 border border-white/10 text-[8px] text-space-400 px-2 py-1 rounded hover:bg-white/10">DP</button>
+                    <button onclick="document.getElementById('sched-super-input').value='CA'" class="bg-white/5 border border-white/10 text-[8px] text-space-400 px-2 py-1 rounded hover:bg-white/10">CA</button>
+                    <button onclick="document.getElementById('sched-super-input').value='DJ'" class="bg-white/5 border border-white/10 text-[8px] text-space-400 px-2 py-1 rounded hover:bg-white/10">DJ</button>
+                </div>
+            </div>
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="applyQuickTag('RD')" class="py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase rounded-lg hover:bg-blue-500/30">RD</button>
                 <button onclick="applyQuickTag('RRD')" class="py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase rounded-lg hover:bg-blue-500/30">RRD</button>
@@ -816,8 +847,153 @@
     </div>
 </div>
 
+<!-- Web Folder Modal -->
+<div id="file-kiwi-modal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-cyan-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">Secure Web Folder</h3>
+                <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Encrypted Document Repository</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="window.sendKiwiNotification()" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">
+                    <i class="fa-solid fa-bell mr-2"></i>Notify Fleet
+                </button>
+                <button onclick="toggleFileKiwiModal()" class="text-space-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-circle-xmark text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 bg-white">
+            <iframe id="kiwi-iframe" src="" class="w-full h-full border-none"></iframe>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 text-center">
+            <button onclick="toggleFileKiwiModal()" class="text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Close Repository</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Personnel to Scheduler Modal -->
+<div id="add-personnel-modal" class="fixed inset-0 z-[160] flex items-center justify-center p-4 hidden backdrop-blur-md bg-space-950/60">
+    <div class="glass-card p-8 rounded-[2rem] max-w-sm w-full animate-in zoom-in duration-200">
+        <h4 class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-6">Provision Deployment Node</h4>
+        <div class="space-y-4">
+            <div>
+                <label class="info-label">Personnel Node</label>
+                <select id="add-sched-emp-select" class="bg-space-950 border border-white/10 text-white rounded-lg px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="">Select Crew...</option>
+                </select>
+            </div>
+            <div>
+                <label class="info-label">Deployment Station</label>
+                <select id="add-sched-pos-select" class="bg-space-950 border border-white/10 text-white rounded-lg px-4 py-3 text-sm w-full outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="">Select Station...</option>
+                    <option value="Dine In">Dine In</option>
+                    <option value="CIC">CIC</option>
+                    <option value="DJ">DJ</option>
+                    <option value="Dispatch">Dispatch</option>
+                    <option value="Cashier">Cashier</option>
+                    <option value="SC">SC</option>
+                    <option value="SO">SO</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Assembler">Assembler</option>
+                    <option value="Fryman">Fryman</option>
+                    <option value="Noodles">Noodles</option>
+                    <option value="Backup">Backup</option>
+                    <option value="SS">SS</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-8 space-y-3">
+            <button id="btn-add-personnel-save" onclick="window.saveAddPersonnelToSched()" class="w-full py-4 bg-cyan-500 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-cyan-400 transition-all">Add to Schedule</button>
+            <button onclick="document.getElementById('add-personnel-modal').classList.add('hidden')" class="w-full py-3 text-space-400 text-[9px] font-bold uppercase hover:text-white transition-all">Cancel Operation</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    let currentAppraisals = [], editingAppraisal = null, appRatings = [0,0,0,0,0], appQtr = 1;
+    var sb = window.sb;
+    var getSB = function() { return window.sb || sb; };
+
+    var AUTH_PASS = null, MEDAL_PASS = null, SUPER_PASS = null;
+    var employees = [], activeTab = 'attendance', portalRole = 'admin';
+    var currentAttendance = [], allAttendance = [], allDaRecords = [], allAttritionRecords = [], dtrRecords = [];
+    var shiftTemplates = [], weeklySchedules = [], currentSchedDate = new Date();
+    var allChatMessages = [], chatChannel = null;
+    var currentNote = null, showExcrew = false, medalCountdownStart = null, hiddenSchedDayIndices = new Set();
+    var showSchedulerOrder = false;
+    var currentCalDate = new Date(), dtrCalDate = new Date(), currentVaultEmp = null, selectedDTRDate = null;
+    var isVaultEditing = false, exportContext = { mode: 'dtr', emp: null };
+    var weekDays = [];
+    var currentAppraisals = [], editingAppraisal = null, appRatings = [0,0,0,0,0], appQtr = 1;
+
+    async function checkAuth() {
+        var user = document.getElementById('sys-user').value.trim();
+        var pass = document.getElementById('sys-pass').value.trim();
+        var error = document.getElementById('auth-error');
+        var btn = document.getElementById('login-btn');
+
+        // Final fallback for Supabase client
+        if (!window.sb && window.supabase) {
+            window.sb = window.supabase.createClient('https://uhmjgnwpzsemksxcjpiz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWpnbndwenNlbWtzeGNqcGl6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODMyNDU2NCwiZXhwIjoyMDkzOTAwNTY0fQ.SVdNjQlocvBEwwxl2K_7BMT94vUq5fkNRev65fXrvyc');
+        }
+        var sb = window.sb;
+
+        if (!sb) {
+            error.innerText = "Access Denied: Terminal Offline";
+            error.classList.remove('hidden');
+            console.error("Supabase client not initialized.");
+            return;
+        }
+
+        if (!user || !pass) {
+            error.innerText = "Access Denied: Credentials Incomplete";
+            error.classList.remove('hidden');
+            return;
+        }
+
+        btn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full mx-auto"></div>'; btn.disabled = true;
+        try {
+            if (!AUTH_PASS || !MEDAL_PASS || !SUPER_PASS) {
+                try {
+                    var { data: settings } = await sb.from('settings').select('key, value').in('key', ['admin_portal_pass', 'medal_portal_pass', 'superadmin_portal_pass']);
+                    if (settings) {
+                        var adminSet = settings.find(function(s) { return s.key === 'admin_portal_pass'; });
+                        AUTH_PASS = adminSet ? adminSet.value : 'fusion2026';
+                        var medalSet = settings.find(function(s) { return s.key === 'medal_portal_pass'; });
+                        MEDAL_PASS = medalSet ? medalSet.value : 'medal2026';
+                        var superSet = settings.find(function(s) { return s.key === 'superadmin_portal_pass'; });
+                        SUPER_PASS = superSet ? superSet.value : 'nocturnal';
+                    }
+                } catch (e) {}
+            }
+
+            if (user === 'fusion' && pass === AUTH_PASS) { setSession('admin', 'fusion'); return; }
+            if (user === 'medal' && pass === MEDAL_PASS) { setSession('medal', 'medal'); return; }
+            if (user === 'nocturnal' && pass === SUPER_PASS) { setSession('superadmin', 'fusion'); return; }
+            if (user === 'chowking' && pass === 'chowking2026') { setSession('admin', 'chowking'); return; }
+
+            // Using template literal for or() for better reliability
+            var { data: emp, error: empError } = await sb.from('employees').select('*').eq('employee_no', user).or(`portal_password.eq."${pass}",password_hash.eq."${pass}"`).maybeSingle();
+
+            if (empError) throw empError;
+            if (emp) {
+                sessionStorage.setItem('portal_auth', 'true');
+                sessionStorage.setItem('portal_role', 'personal');
+                sessionStorage.setItem('portal_id', emp.employee_no);
+                portalRole = 'personal';
+                showVault(emp);
+                initializeData();
+            } else {
+                error.innerText = "Access Denied: Terminal Sync Failed";
+                error.classList.remove('hidden');
+                btn.innerText = 'Establish Uplink'; btn.disabled = false;
+            }
+        } catch (err) {
+            error.innerText = "Sync Error: " + err.message; error.classList.remove('hidden');
+            btn.innerText = 'Establish Uplink'; btn.disabled = false;
+        }
+    };
 
     async function openAppraisalHistory() {
         if (!currentVaultEmp) return;
@@ -840,7 +1016,7 @@
                 <div class="space-y-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider">
                     <p>• Probationary: Month 1, Month 3, Month 6</p>
                     <p>• Regular: Every 6 months thereafter</p>
-                    <p class="text-rose-400">• Failing (< 2.0): 3 consecutive monthly evaluations</p>
+                    <p class="text-rose-400">• Failing (&lt; 2.0): 3 consecutive monthly evaluations</p>
                 </div>
             </div>
         `;
@@ -878,7 +1054,7 @@
                 }
             }
         } catch (err) {
-            newList.innerHTML = `<p class="text-center py-8 text-rose-400 text-[10px] font-bold">Error: ${err.message}</p>`;
+            newList.innerHTML = `<p class="text-center py-8 text-rose-400 text-[10px] font-bold">Error: \${err.message}</p>`;
         }
     }
 
@@ -1113,7 +1289,6 @@
     }
 
     function closeAppraisalForm() { document.getElementById('appraisal-form-modal').classList.add('hidden'); }
-    function closeAppraisalForm() { document.getElementById('appraisal-form-modal').classList.add('hidden'); }
 
     window.printReadout = () => {
         const content = document.getElementById('readout-content').innerHTML;
@@ -1133,34 +1308,6 @@
         win.print();
     };
     function closeReadoutView() { document.getElementById('readout-view-modal').classList.add('hidden'); }
-</script>
-<div id="file-kiwi-modal" class="fixed inset-0 z-[150] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
-    <div class="glass-card rounded-[2rem] max-w-4xl w-full h-[80vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-cyan-500/20">
-        <div class="px-8 py-4 border-b border-white/5 flex items-center justify-between bg-space-900/60">
-            <div>
-                <h3 class="text-sm font-black text-white uppercase tracking-widest">Shared Web Folder</h3>
-                <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Powered by File.kiwi</p>
-            </div>
-            <button onclick="toggleFileKiwiModal()" class="text-space-400 hover:text-white transition-colors">
-                <i class="fa-solid fa-circle-xmark text-xl"></i>
-            </button>
-        </div>
-        <div class="flex-1 bg-white">
-            <iframe id="kiwi-iframe" src="" class="w-full h-full border-none" allow="clipboard-read; clipboard-write; download"></iframe>
-        </div>
-        <div class="p-6 bg-space-900/60 border-t border-white/5 flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <p class="text-[10px] text-space-400 font-medium italic">Upload your files above, then notify the team below.</p>
-            <button onclick="sendKiwiNotification()" class="bg-cyan-500 text-space-950 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/10">
-                <i class="fa-solid fa-share-nodes mr-2"></i>Notify Team of Upload
-            </button>
-        </div>
-    </div>
-</div>
-
-<script>
-    const SUPABASE_URL = 'https://uhmjgnwpzsemksxcjpiz.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWpnbndwenNlbWtzeGNqcGl6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODMyNDU2NCwiZXhwIjoyMDkzOTAwNTY0fQ.SVdNjQlocvBEwwxl2K_7BMT94vUq5fkNRev65fXrvyc';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function getProfilePic(empNo) {
         if (!empNo) return `https://ui-avatars.com/api/?name=User&background=0b0f19&color=22d3ee`;
@@ -1169,15 +1316,6 @@
         return data.publicUrl;
     }
 
-    let AUTH_PASS = null, MEDAL_PASS = null, SUPER_PASS = null;
-    let employees = [], activeTab = 'attendance', portalRole = 'admin';
-    let currentAttendance = [], allAttendance = [], allDaRecords = [], allAttritionRecords = [], dtrRecords = [];
-    let shiftTemplates = [], weeklySchedules = [], currentSchedDate = new Date();
-    let allChatMessages = [], chatChannel = null;
-    let currentNote = null, showExcrew = false, medalCountdownStart = null, hiddenSchedDayIndices = new Set();
-    let showSchedulerOrder = false;
-    let currentCalDate = new Date(), dtrCalDate = new Date(), currentVaultEmp = null, selectedDTRDate = null;
-    let isVaultEditing = false, exportContext = { mode: 'dtr', emp: null };
 
     function toggleEditVault() {
         if (!currentVaultEmp) return;
@@ -1193,7 +1331,7 @@
 
             // Header / Position
             document.getElementById('v-id-pos-container').innerHTML = `
-                <p class="text-cyan-400 font-bold uppercase tracking-[0.3em] text-[9px]">ID: ${currentVaultEmp.employee_no} • </p>
+                <p class="text-cyan-400 font-bold uppercase tracking-[0.3em] text-[9px]">ID: ${currentVaultEmp.employee_no} � </p>
                 <input type="text" id="edit-position" value="${currentVaultEmp.position || ''}" class="bg-space-950 border border-white/10 text-cyan-400 rounded px-2 py-0.5 text-[9px] font-black uppercase w-32 outline-none focus:ring-1 focus:ring-cyan-500 mr-2">
             `;
 
@@ -1259,6 +1397,39 @@
                 <div><label class="info-label">Emergency Hotline</label><input type="text" id="edit-ec-phone" value="${currentVaultEmp.emergency_contact_phone || ''}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 font-mono text-xs w-full"></div>
             `;
 
+            // Allocation Units & Sizes
+            const sizeOptions = [
+                'Female Small', 'Female Medium', 'Female Large', 'Female Xlarge',
+                'Male Small', 'Male Medium', 'Male Large', 'Male Xlarge'
+            ];
+            const allocCont = document.getElementById('v-allocation-container');
+            if (allocCont) {
+                allocCont.innerHTML = `
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="info-label">Cap Units</label><input type="number" id="edit-cap" value="${currentVaultEmp.uniform_cap || 0}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
+                        <div><label class="info-label">Apron Units</label><input type="number" id="edit-apron" value="${currentVaultEmp.uniform_apron || 0}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
+                        <div><label class="info-label">Shirt Units</label><input type="number" id="edit-shirt" value="${currentVaultEmp.uniform_shirt || 0}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
+                        <div><label class="info-label">Pants Units</label><input type="number" id="edit-pants" value="${currentVaultEmp.uniform_pants || 0}" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="info-label">Shirt Size</label>
+                            <select id="edit-shirt-size" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full">
+                                <option value="">Select Size...</option>
+                                ${sizeOptions.map(s => `<option value="${s}" ${currentVaultEmp.shirt_size === s ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="info-label">Pants Size</label>
+                            <select id="edit-pants-size" class="bg-space-950 border border-white/10 text-white rounded px-3 py-2 text-xs w-full">
+                                <option value="">Select Size...</option>
+                                ${sizeOptions.map(s => `<option value="${s}" ${currentVaultEmp.pants_size === s ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
         } else {
             editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i>Edit Profile';
             editBtn.classList.replace('text-rose-400', 'text-amber-400');
@@ -1301,7 +1472,13 @@
             bank_account_number: document.getElementById('edit-bank-acc').value,
             emergency_contact_name: document.getElementById('edit-ec-name').value,
             emergency_contact_relationship: document.getElementById('edit-ec-rel').value,
-            emergency_contact_phone: document.getElementById('edit-ec-phone').value
+            emergency_contact_phone: document.getElementById('edit-ec-phone').value,
+            uniform_cap: document.getElementById('edit-cap') ? parseInt(document.getElementById('edit-cap').value) || 0 : currentVaultEmp.uniform_cap,
+            uniform_apron: document.getElementById('edit-apron') ? parseInt(document.getElementById('edit-apron').value) || 0 : currentVaultEmp.uniform_apron,
+            uniform_shirt: document.getElementById('edit-shirt') ? parseInt(document.getElementById('edit-shirt').value) || 0 : currentVaultEmp.uniform_shirt,
+            uniform_pants: document.getElementById('edit-pants') ? parseInt(document.getElementById('edit-pants').value) || 0 : currentVaultEmp.uniform_pants,
+            shirt_size: document.getElementById('edit-shirt-size') ? document.getElementById('edit-shirt-size').value : currentVaultEmp.shirt_size,
+            pants_size: document.getElementById('edit-pants-size') ? document.getElementById('edit-pants-size').value : currentVaultEmp.pants_size
         };
 
         try {
@@ -1348,7 +1525,7 @@
     function changeMonth(dir) { currentCalDate.setMonth(currentCalDate.getMonth() + dir); renderCalendar(); }
     function closeNote() { document.getElementById('note-modal').classList.add('hidden'); }
     function showDayNote(dateStr, status, note) {
-        document.getElementById('note-date-title').innerText = `${new Date(dateStr).toDateString()} • ${status}`;
+        document.getElementById('note-date-title').innerText = `${new Date(dateStr).toDateString()} � ${status}`;
         document.getElementById('note-content').innerText = note && note.trim() ? `"${note}"` : "No remarks recorded for this sequence.";
         document.getElementById('note-modal').classList.remove('hidden');
     }
@@ -1417,67 +1594,6 @@
         else { passInput.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
     }
 
-    async function checkAuth() {
-        const user = document.getElementById('sys-user').value.trim();
-        const pass = document.getElementById('sys-pass').value.trim();
-        const error = document.getElementById('auth-error');
-        const btn = document.getElementById('login-btn');
-
-        if (!user || !pass) {
-            error.innerText = "Access Denied: Credentials Incomplete";
-            error.classList.remove('hidden');
-            return;
-        }
-
-        btn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full mx-auto"></div>'; btn.disabled = true;
-        try {
-            if (!AUTH_PASS || !MEDAL_PASS || !SUPER_PASS) {
-                const { data: settings } = await sb.from('settings').select('key, value').in('key', ['admin_portal_pass', 'medal_portal_pass', 'superadmin_portal_pass']);
-                if (settings) {
-                    AUTH_PASS = settings.find(s => s.key === 'admin_portal_pass')?.value || 'fusion2026';
-                    MEDAL_PASS = settings.find(s => s.key === 'medal_portal_pass')?.value || 'medal2026';
-                    SUPER_PASS = settings.find(s => s.key === 'superadmin_portal_pass')?.value || 'nocturnal';
-                }
-            }
-
-            // System Admin / Special Access Roles
-            if (user === 'fusion' && pass === AUTH_PASS) {
-                setSession('admin', 'fusion'); return;
-            } else if (user === 'medal' && pass === MEDAL_PASS) {
-                setSession('medal', 'medal'); return;
-            } else if (user === 'nocturnal' && pass === SUPER_PASS) {
-                setSession('superadmin', 'fusion'); return;
-            } else if (user === 'chowking' && pass === 'chowking2026') {
-                setSession('admin', 'chowking'); return;
-            }
-
-            // Employee Personal Identity Check (Username: employee_no, Password: portal_password or password_hash)
-            let { data: emp } = await sb.from('employees')
-                .select('*')
-                .eq('employee_no', user)
-                .or(`portal_password.eq."${pass}",password_hash.eq."${pass}"`)
-                .maybeSingle();
-
-            if (emp) {
-                sessionStorage.setItem('portal_auth', 'true');
-                sessionStorage.setItem('portal_role', 'personal');
-                sessionStorage.setItem('portal_id', emp.employee_no);
-                portalRole = 'personal';
-                showVault(emp);
-                initializeData();
-            } else {
-                error.innerText = "Access Denied: Terminal Sync Failed";
-                error.classList.remove('hidden');
-                btn.innerText = 'Establish Uplink';
-                btn.disabled = false;
-            }
-        } catch (err) {
-            error.innerText = "Sync Error: " + err.message;
-            error.classList.remove('hidden');
-            btn.innerText = 'Establish Uplink';
-            btn.disabled = false;
-        }
-    }
 
     function setSession(role, id) {
         sessionStorage.setItem('portal_auth', 'true');
@@ -1640,6 +1756,14 @@
     async function showVault(emp) {
         currentVaultEmp = emp;
         isVaultEditing = false;
+        var sb = window.sb;
+        if (!sb) return;
+
+        // Fresh fetch of employee data to ensure all Disciplinary Action levels are included
+        try {
+            var { data: freshEmp } = await sb.from('employees').select('*').eq('employee_no', emp.employee_no).single();
+            if (freshEmp) emp = freshEmp;
+        } catch (e) {}
 
         // Reset containers to view mode structure
         document.getElementById('v-id-pos-container').innerHTML = `<p id="v-id-pos" class="text-cyan-400 font-bold uppercase tracking-[0.3em] text-[9px]">ID: --- • ---</p>`;
@@ -1670,6 +1794,21 @@
             <div><span class="info-label">Relationship</span><p id="v-ec-rel" class="info-value uppercase text-xs">---</p></div>
             <div><span class="info-label text-rose-400">Emergency Hotline</span><p id="v-ec-phone" class="info-value font-mono">---</p></div>
         `;
+        const allocContView = document.getElementById('v-allocation-container');
+        if (allocContView) {
+            allocContView.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Cap</span><p id="v-cap" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Apron</span><p id="v-apron" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt</span><p id="v-shirt" class="info-value">0</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants</span><p id="v-pants" class="info-value">0</p></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Shirt Size</span><p id="v-shirt-size" class="info-value text-xs text-cyan-400 font-bold">---</p></div>
+                    <div class="bg-space-950/50 p-3 rounded-xl border border-white/5"><span class="info-label !text-[8px]">Pants Size</span><p id="v-pants-size" class="info-value text-xs text-cyan-400 font-bold">---</p></div>
+                </div>
+            `;
+        }
 
         document.getElementById('login-container').classList.add('hidden');
         document.getElementById('personal-vault-container').classList.remove('hidden');
@@ -1679,12 +1818,12 @@
         currentCalDate = new Date(); dtrCalDate = new Date();
         renderCalendar();
 
-        const backBtn = document.getElementById('v-back-btn');
-        const editBtn = document.getElementById('v-edit-btn');
-        const saveBtn = document.getElementById('v-save-vault-btn');
-        const msgBtn = document.getElementById('v-msg-btn');
+        var backBtn = document.getElementById('v-back-btn');
+        var editBtn = document.getElementById('v-edit-btn');
+        var saveBtn = document.getElementById('v-save-vault-btn');
+        var msgBtn = document.getElementById('v-msg-btn');
 
-        const myId = sessionStorage.getItem('portal_id');
+        var myId = sessionStorage.getItem('portal_id');
 
         if (portalRole === 'admin' || portalRole === 'superadmin') {
             backBtn.classList.remove('hidden');
@@ -1693,7 +1832,6 @@
         } else {
             backBtn.classList.add('hidden');
             editBtn.classList.add('hidden');
-            // Show message button if viewing someone else's profile (though personal portal usually only sees own)
             if (myId && myId !== emp.employee_no) msgBtn.classList.remove('hidden');
             else msgBtn.classList.add('hidden');
         }
@@ -1702,38 +1840,29 @@
         editBtn.classList.remove('text-rose-400');
         editBtn.classList.add('text-amber-400');
 
-        const photoImg = document.getElementById('v-photo'), photoPlaceholder = document.getElementById('v-photo-placeholder');
+        var photoImg = document.getElementById('v-photo'), photoPlaceholder = document.getElementById('v-photo-placeholder');
         photoImg.src = getProfilePic(emp.employee_no);
-        photoImg.onload = () => { photoImg.classList.remove('hidden'); photoPlaceholder.classList.add('hidden'); };
-        photoImg.onerror = () => { photoImg.classList.add('hidden'); photoPlaceholder.classList.remove('hidden'); };
+        photoImg.onload = function() { photoImg.classList.remove('hidden'); photoPlaceholder.classList.add('hidden'); };
+        photoImg.onerror = function() { photoImg.classList.add('hidden'); photoPlaceholder.classList.remove('hidden'); };
 
-        const displayPos = emp.position || emp.scheduler_position;
-        document.getElementById('v-name').innerText = `${emp.first_name} ${emp.last_name}`;
+        var displayPos = emp.position || emp.scheduler_position;
+        document.getElementById('v-name').innerText = emp.first_name + " " + emp.last_name;
 
-        let idPosHtml = `<p id="v-id-pos" class="text-cyan-400 font-bold uppercase tracking-[0.15em] text-[10px] whitespace-nowrap">ID: ${emp.employee_no} • ${displayPos}</p>`;
+        var idPosHtml = '<p id="v-id-pos" class="text-cyan-400 font-bold uppercase tracking-[0.15em] text-[10px] whitespace-nowrap">ID: ' + emp.employee_no + ' • ' + displayPos + '</p>';
 
-        // Regular/Probationary Badge Check
         if (emp.date_hired && emp.position !== 'Excrew') {
-            const hired = new Date(emp.date_hired);
-            const sixMonthsAgo = new Date();
+            var hired = new Date(emp.date_hired);
+            var sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
             if (hired <= sixMonthsAgo) {
-                idPosHtml += `
-                    <div class="regular-badge ml-3">
-                        <span class="gold-glitter text-[8px] whitespace-nowrap">REGULAR</span>
-                    </div>
-                `;
+                idPosHtml += '<div class="regular-badge ml-3"><span class="gold-glitter text-[8px] whitespace-nowrap">REGULAR</span></div>';
             } else {
-                idPosHtml += `
-                    <div class="probationary-badge ml-3">
-                        <span class="silver-glitter text-[8px] whitespace-nowrap">PROBATIONARY</span>
-                    </div>
-                `;
+                idPosHtml += '<div class="probationary-badge ml-3"><span class="silver-glitter text-[8px] whitespace-nowrap">PROBATIONARY</span></div>';
             }
         }
         document.getElementById('v-id-pos-container').innerHTML = idPosHtml;
 
-        document.getElementById('v-fullname').innerText = `${emp.first_name} ${emp.middle_name ? emp.middle_name + ' ' : ''}${emp.last_name}`;
+        document.getElementById('v-fullname').innerText = emp.first_name + " " + (emp.middle_name ? emp.middle_name + ' ' : '') + emp.last_name;
         document.getElementById('v-email').innerText = emp.email || 'N/A';
         document.getElementById('v-phone').innerText = emp.phone_number || 'N/A';
         document.getElementById('v-marital').innerText = emp.marital_status || '---';
@@ -1742,11 +1871,11 @@
         document.getElementById('v-location').innerText = emp.location || '---';
 
         if (emp.date_hired) {
-            const hired = new Date(emp.date_hired);
-            const endDate = emp.is_resigned && emp.resignation_date ? new Date(emp.resignation_date) : new Date();
-            const diff = endDate - hired;
-            const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365)), months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
-            document.getElementById('v-tenure').innerText = `${years}y ${months}m`;
+            var hired = new Date(emp.date_hired);
+            var endDate = emp.is_resigned && emp.resignation_date ? new Date(emp.resignation_date) : new Date();
+            var diff = endDate - hired;
+            var years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365)), months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+            document.getElementById('v-tenure').innerText = years + "y " + months + "m";
         }
 
         document.getElementById('v-sss').innerText = emp.sss || '---';
@@ -1759,44 +1888,20 @@
         document.getElementById('v-apron').innerText = emp.uniform_apron || 0;
         document.getElementById('v-shirt').innerText = emp.uniform_shirt || 0;
         document.getElementById('v-pants').innerText = emp.uniform_pants || 0;
+        if (document.getElementById('v-shirt-size')) document.getElementById('v-shirt-size').innerText = emp.shirt_size || '---';
+        if (document.getElementById('v-pants-size')) document.getElementById('v-pants-size').innerText = emp.pants_size || '---';
 
         // Performance Appraisal
-        const score = emp.performance_score;
-        const comments = emp.performance_comments;
-        const appraisalCard = document.getElementById('v-appraisal-card');
-        const appraisalBtn = document.getElementById('v-perf-btn');
-
+        var score = emp.performance_score;
+        var comments = emp.performance_comments;
+        var appraisalBtn = document.getElementById('v-perf-btn');
         if (score !== null && score !== undefined) {
-            appraisalCard.classList.remove('hidden');
             appraisalBtn.classList.remove('hidden');
-            document.getElementById('v-perf-score').innerText = score.toFixed(1);
-            document.getElementById('v-perf-comments').innerText = comments || 'Performance assessment established. Keep up the momentum!';
-
-            const month = emp.appraisal_month || 'Current';
-            const qtr = emp.appraisal_qtr ? `${emp.appraisal_qtr}${emp.appraisal_qtr === 1 ? 'st' : emp.appraisal_qtr === 2 ? 'nd' : emp.appraisal_qtr === 3 ? 'rd' : 'th'} QTR` : '';
-            document.getElementById('v-perf-period').innerText = `${month} ${qtr}`.trim();
-
-            // Optional: Mini ratings indicators
-            const ratings = [emp.rating1, emp.rating2, emp.rating3, emp.rating4, emp.rating5];
-            if (ratings.some(r => r > 0)) {
-                let ratingsHtml = '<div class="flex gap-1 mt-3 justify-center">';
-                ratings.forEach((r, i) => {
-                    if (r === undefined || r === null) {
-                         ratingsHtml += `<div class="h-1 w-full rounded-full bg-white/5" title="Factor ${i+1}: N/A"></div>`;
-                         return;
-                    }
-                    const colors = ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500'];
-                    ratingsHtml += `<div class="h-1 w-full rounded-full ${r > 0 ? colors[r-1] : 'bg-white/5'}" title="Factor ${i+1}: ${r}/3"></div>`;
-                });
-                ratingsHtml += '</div>';
-                document.getElementById('v-perf-comments').innerHTML += ratingsHtml;
-            }
         } else {
-            appraisalCard.classList.add('hidden');
             appraisalBtn.classList.add('hidden');
         }
 
-        const certEl = document.getElementById('v-cert');
+        var certEl = document.getElementById('v-cert');
         if (emp.is_certified) { certEl.innerText = "Crew Certified"; certEl.className = "px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest text-center"; }
         else { certEl.innerText = "Uncertified"; certEl.className = "px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest text-center"; }
 
@@ -1804,56 +1909,86 @@
         document.getElementById('v-ec-rel').innerText = emp.emergency_contact_relationship || '---';
         document.getElementById('v-ec-phone').innerText = emp.emergency_contact_phone || '---';
 
-        const { data: settings } = await sb.from('settings').select('value').eq('key', 'medal_countdown_start').maybeSingle();
-        const startStr = settings ? settings.value : null, startDate = startStr ? new Date(startStr) : new Date();
-        if (!startStr) startDate.setDate(startDate.getDate() - 30);
-        startDate.setHours(0,0,0,0);
-        const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
+        try {
+            var { data: settings } = await sb.from('settings').select('value').eq('key', 'medal_countdown_start').maybeSingle();
+            var startStr = settings ? settings.value : null, startDate = startStr ? new Date(startStr) : new Date();
+            if (!startStr) startDate.setDate(startDate.getDate() - 30);
+            startDate.setHours(0,0,0,0);
+            var endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
 
-        const { data: att } = await sb.from('attendance_records').select('*').eq('employee_id', emp.employee_no);
-        let gold = 0, silver = 0;
-        (att || []).forEach(r => {
-            const d = new Date(r.date);
-            if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
-                const match = (r.note || "").match(/\((\d+)\s*mins\)/);
-                if (match) {
-                    if (parseInt(match[1]) >= 5) gold++; else silver++;
-                } else {
-                    gold++; // Default to gold if minutes missing to be strict
+            var { data: att } = await sb.from('attendance_records').select('*').eq('employee_id', emp.employee_no);
+            var gold = 0, silver = 0;
+            (att || []).forEach(function(r) {
+                var d = new Date(r.date);
+                if (d >= startDate && d < endDate && (r.status === 'LATE' || r.status === 'OVERBREAK')) {
+                    var match = (r.note || "").match(/\((\d+)\s*mins\)/);
+                    if (match) {
+                        if (parseInt(match[1]) >= 5) gold++; else silver++;
+                    } else { gold++; }
                 }
+            });
+            var medalsHtml = '';
+            for(var i=0; i<gold; i++) medalsHtml += '<i class="fa-solid fa-medal text-amber-400 text-xl shadow-[0_0_10px_rgba(251,191,36,0.5)]"></i>';
+            for(var i=0; i<silver; i++) medalsHtml += '<i class="fa-solid fa-medal text-slate-400 text-xl shadow-[0_0_10px_rgba(148,163,184,0.5)]"></i>';
+            document.getElementById('v-medal-icons').innerHTML = medalsHtml || '<p class="text-[10px] text-space-400 italic">No medals in current cycle.</p>';
+        } catch (e) {}
+
+        try {
+            var { data: dtr } = await sb.from('daily_time_records').select('*').eq('employee_id', emp.employee_no);
+            dtrRecords = dtr || [];
+        } catch (e) {}
+
+        var daCard = document.getElementById('v-da-card'), daList = document.getElementById('v-da-list');
+        daList.innerHTML = '';
+
+        var getOrdinal = function(n) {
+            var s = ["th", "st", "nd", "rd"], v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
+        };
+
+        if (emp.position !== 'Excrew') {
+            var activeHtml = '';
+            var lateLevel = parseInt(emp.late_offence_level || emp.lateOffenceLevel || 0);
+            var absentLevel = parseInt(emp.absent_offence_level || emp.absentOffenceLevel || 0);
+            var hamperingLevel = parseInt(emp.hampering_offence_level || emp.hamperingOffenceLevel || 0);
+            var customOffences = emp.custom_offences || emp.customOffences || [];
+
+            if (lateLevel > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>Lates: ' + lateLevel + getOrdinal(lateLevel) + ' Offence</span></div>';
+            if (absentLevel > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>Absent: ' + absentLevel + getOrdinal(absentLevel) + ' Offence</span></div>';
+            if (hamperingLevel > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>Hampering: ' + hamperingLevel + getOrdinal(hamperingLevel) + ' Offence</span></div>';
+
+            if (typeof customOffences === 'string' && customOffences.trim() && customOffences !== '[]') {
+                try { customOffences = JSON.parse(customOffences); } catch(e) { customOffences = []; }
             }
-        });
+            if (Array.isArray(customOffences)) {
+                customOffences.forEach(function(offence) {
+                    var level = parseInt(offence.level || 0);
+                    if (level > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>' + offence.name + ': ' + level + getOrdinal(level) + ' Offence</span></div>';
+                });
+            }
 
-        let icons = '';
-        for(let i=0; i<gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-xl shadow-[0_0_10px_rgba(251,191,36,0.5)]"></i>';
-        for(let i=0; i<silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-xl shadow-[0_0_10px_rgba(148,163,184,0.5)]"></i>';
-        document.getElementById('v-medal-icons').innerHTML = icons || '<p class="text-[10px] text-space-400 italic">No medals in current cycle.</p>';
+            // Fetch specific DA cases for this employee
+            var daHistoryHtml = '';
+            try {
+                var { data: daHistory } = await sb.from('da_records').select('*').eq('employee_id', emp.employee_no).order('date_report', { ascending: false });
+                if (daHistory && daHistory.length > 0) {
+                    daHistoryHtml = '<div class="mt-4 pt-4 border-t border-rose-500/20"><p class="text-[9px] font-black text-rose-300 uppercase tracking-widest mb-2">Incident Record Archive</p>';
+                    daHistory.forEach(function(record) {
+                        daHistoryHtml += '<div class="bg-black/20 p-2 rounded mb-2 border border-rose-500/10">' +
+                            '<p class="text-white text-[10px] font-bold">' + record.da_type + ' — ' + record.status + '</p>' +
+                            '<p class="text-rose-200/70 text-[9px] italic mt-1">"' + (record.verdict || 'No verdict recorded') + '"</p>' +
+                            '</div>';
+                    });
+                    daHistoryHtml += '</div>';
+                }
+            } catch (e) {}
 
-        const { data: dtr } = await sb.from('daily_time_records').select('*').eq('employee_id', emp.employee_no);
-        dtrRecords = dtr || [];
-
-        const { data: daRecords } = await sb.from('da_records').select('*').eq('employee_name', `${emp.first_name} ${emp.last_name}`);
-        const empDA = daRecords || [];
-        const daCard = document.getElementById('v-da-card'), daList = document.getElementById('v-da-list');
-
-        if (empDA.length > 0 && emp.position !== 'Excrew') {
-            daCard.classList.remove('hidden');
-            daList.innerHTML = empDA.map(r => {
-                const isDone = (r.status || "").toUpperCase().includes('DONE');
-                const badgeClass = isDone ? "badge-emerald" : "badge-rose";
-                return `
-                <div class="bg-space-950/50 p-4 rounded-xl border border-rose-500/10">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-black text-rose-400 uppercase tracking-widest">${r.da_type}</span>
-                        <span class="glass-badge ${badgeClass} !py-0.5 !px-2 !text-[8px]">${r.status}</span>
-                    </div>
-                    <div class="flex flex-col gap-1 mb-2">
-                        <p class="text-[9px] text-space-400 font-bold uppercase">Incident: ${formatAwolDates(r.date_awol)}</p>
-                        <p class="text-[9px] text-space-400 font-bold uppercase">Reported: ${formatDate(r.date_report) || 'Pending'}</p>
-                    </div>
-                    <p class="text-[11px] text-slate-300 italic leading-relaxed">"${r.verdict || 'Processing incident variables...'}"</p>
-                </div>
-            `;}).join('');
+            if (activeHtml || daHistoryHtml) {
+                daCard.classList.remove('hidden');
+                daList.innerHTML = activeHtml + daHistoryHtml;
+            } else {
+                daCard.classList.add('hidden');
+            }
         } else {
             daCard.classList.add('hidden');
         }
@@ -1899,7 +2034,7 @@
                 else if (rec.status === 'RD') statusClass = 'cal-rd';
                 else statusClass = 'cal-present';
             }
-            html += `<div onclick="showDayNote('${dateStr}', '${rec?.status || 'NO RECORD'}', '${(rec?.note || "").replace(/'/g, "\\'")}')" class="calendar-day ${statusClass} ${dateStr === todayStr ? 'cal-today' : ''}">${medalIcon}<span>${d}</span></div>`;
+            html += `<div onclick="showDayNote('${dateStr}', '${rec ? rec.status : 'NO RECORD'}', '${(rec ? (rec.note || "") : "").replace(/'/g, "\\'")}')" class="calendar-day ${statusClass} ${dateStr === todayStr ? 'cal-today' : ''}">${medalIcon}<span>${d}</span></div>`;
         }
         body.innerHTML = html;
     }
@@ -1933,7 +2068,7 @@
         document.getElementById('dtr-entry-title').innerText = `${new Date(date).toDateString()} Entry`;
 
         const rdCheck = document.getElementById('dtr-is-rd');
-        const isRD = r?.note && r.note.startsWith('[RD]');
+        const isRD = r && r.note && r.note.startsWith('[RD]');
         rdCheck.checked = !!isRD;
         toggleRDInput(rdCheck.checked);
 
@@ -1943,8 +2078,8 @@
             const parts = t.split(':'); let hh = parseInt(parts[0]);
             h.value = (hh % 12 || 12).toString().padStart(2,'0'); m.value = parts[1]; a.value = hh >= 12 ? 'PM' : 'AM';
         };
-        set('ti', r?.time_in); set('to', r?.time_out);
-        document.getElementById('dtr-entry-note').value = isRD ? r.note.replace('[RD] ', '') : (r?.note || '');
+        set('ti', r ? r.time_in : null); set('to', r ? r.time_out : null);
+        document.getElementById('dtr-entry-note').value = isRD ? r.note.replace('[RD] ', '') : (r ? (r.note || '') : '');
         document.getElementById('dtr-entry-modal').classList.remove('hidden');
     }
     function closeDTREntryModal() { document.getElementById('dtr-entry-modal').classList.add('hidden'); }
@@ -2013,7 +2148,7 @@
 
         try {
             document.getElementById('readout-title').innerText = exportContext.mode === 'dtr' ? 'Daily Time Record Readout' : 'Employee Schedule Readout';
-            document.getElementById('readout-subtitle').innerText = `Personnel: ${emp.first_name} ${emp.last_name} • ${formatDate(s)} to ${formatDate(e)}`;
+            document.getElementById('readout-subtitle').innerText = `Personnel: ${emp.first_name} ${emp.last_name} � ${formatDate(s)} to ${formatDate(e)}`;
 
             // Control sync button visibility
             const syncBtn = document.getElementById('btn-sync-all-dtr');
@@ -2038,7 +2173,13 @@
 
                 if (error) throw error;
 
-                records.forEach(r => {
+                const startRange = new Date(s);
+                const endRange = new Date(e);
+
+                for (let d = new Date(startRange); d <= endRange; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                    const r = records.find(x => x.date === dateStr) || { date: dateStr, time_in: null, time_out: null, note: '' };
+
                     const dateObj = new Date(r.date);
                     const isRD = r.note && r.note.startsWith('[RD]');
                     html += `<tr class="hover:bg-white/[0.02]">
@@ -2050,7 +2191,7 @@
                             ${isRD ? `<span class="glass-badge badge-cyan">REST DAY</span> <span class="text-[10px] text-slate-400 italic ml-1">${r.note.replace('[RD] ', '')}</span>` : `<span class="text-[10px] text-slate-400 italic">${r.note || '--'}</span>`}
                         </td>
                     </tr>`;
-                });
+                }
             } else {
                 const { data: records, error } = await sb.from('employee_schedules')
                     .select('*')
@@ -2094,9 +2235,9 @@
         if (!emp) return alert("System Error: Personnel node not identified.");
         const empNo = emp.employee_no;
 
-        const existing = weeklySchedules.find(s => (s.employee_id === targetId || s.employee_id === emp.id || s.employee_id === emp.employee_no) && s.date === date);
-        const tag = existing?.tag;
-        const text = shift || existing?.schedule_text;
+        const existing = weeklySchedules.find(function(s) { return (s.employee_id === targetId || s.employee_id === emp.id || s.employee_id === emp.employee_no) && s.date === date; });
+        const tag = existing ? existing.tag : null;
+        const text = shift || (existing ? existing.schedule_text : null);
 
         if (!text && !tag) return alert("Security Protocol: No schedule found to post.");
 
@@ -2311,17 +2452,21 @@
 
                 const excludedPositions = ["assistant manager", "manager", "senior crew", "administrator", "coordinator"];
 
-                const uniqueNames = [...new Set(data
-                    .filter(e => {
-                        const fullName = `${e.first_name || ''} ${e.last_name || ''}`.trim().toLowerCase();
-                        if (excludedNames.some(exName => fullName.includes(exName.toLowerCase()))) return false;
-                        const pos = (e.position || "").toLowerCase();
-                        if (excludedPositions.some(p => pos.includes(p))) return false;
-                        return !pos.includes("excrew");
-                    })
-                    .map(e => `${e.first_name || ''} ${e.last_name || ''}`.trim()))]
-                    .filter(name => name !== '')
-                    .sort();
+                var uniqueNames = data.filter(function(e) {
+                        var fullName = (e.first_name || '') + ' ' + (e.last_name || '');
+                        fullName = fullName.trim().toLowerCase();
+                        if (excludedNames.some(function(exName) { return fullName.indexOf(exName.toLowerCase()) !== -1; })) return false;
+                        var pos = (e.position || "").toLowerCase();
+                        if (excludedPositions.some(function(p) { return pos.indexOf(p) !== -1; })) return false;
+                        return pos.indexOf("excrew") === -1;
+                    }).map(function(e) {
+                        return ((e.first_name || '') + ' ' + (e.last_name || '')).trim();
+                    });
+
+                // Deduplicate uniqueNames
+                uniqueNames = uniqueNames.filter(function(item, pos) {
+                    return uniqueNames.indexOf(item) == pos;
+                }).sort();
 
                 uniqueNames.forEach(name => {
                     const opt = document.createElement('option');
@@ -2358,10 +2503,19 @@
         } catch (e) { console.error("Shift templates load error", e); }
     }
 
-    function switchTab(tab) {
+    async function switchTab(tab) {
         if (portalRole === 'medal' && tab !== 'medals') return;
         if (portalRole === 'personal' && tab !== 'chat') return;
         activeTab = tab;
+
+        // Refresh data when switching to specific tabs
+        if (tab === 'da') {
+            try {
+                var { data: daData } = await sb.from('da_records').select('*').order('date_report', { ascending: false });
+                if (daData) allDaRecords = daData;
+            } catch (e) {}
+        }
+
         const btnAtt = document.getElementById('btn-attendance'), btnEmp = document.getElementById('btn-employees'), btnDa = document.getElementById('btn-da'), btnAttr = document.getElementById('btn-attrition'), btnMedal = document.getElementById('btn-medals'), btnSystem = document.getElementById('btn-system'), btnSched = document.getElementById('btn-scheduler'), btnChat = document.getElementById('btn-chat');
         const datePicker = document.getElementById('date-picker'), daFilter = document.getElementById('da-filter-container'), excrewBtn = document.getElementById('btn-excrew-filter');
         [btnAtt, btnEmp, btnDa, btnAttr, btnMedal, btnSystem, btnSched, btnChat].forEach(btn => { if (!btn) return; btn.className = "flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"; });
@@ -2378,6 +2532,10 @@
         const listContainer = document.getElementById('attendance-list');
         listContainer.innerHTML = '<div class="p-16 text-center"><div class="loader ease-linear rounded-full border-4 border-t-4 border-space-800 h-10 w-10 mx-auto mb-4"></div></div>';
         try {
+            // Re-fetch employees to get latest Disciplinary Action levels
+            const { data: latestEmps } = await sb.from('employees').select('*');
+            if (latestEmps) employees = latestEmps;
+
             const { data: records, error: recError } = await sb.from('attendance_records').select('*').eq('date', date);
             const { data: noteData } = await sb.from('daily_summary_notes').select('note').eq('date', date).maybeSingle();
             if (recError) throw recError;
@@ -2391,29 +2549,29 @@
         const statCards = { present: document.getElementById('stat-card-present'), late: document.getElementById('stat-card-late'), absent: document.getElementById('stat-card-absent'), da: document.getElementById('stat-card-da') };
 
         if (portalRole === 'medal' || portalRole === 'personal') {
-            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c?.classList.add('hidden'));
+            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden'));
             document.getElementById('stats-container').classList.add('hidden');
             document.getElementById('admin-controls').classList.add('hidden');
             const backVaultBtn = document.getElementById('btn-back-vault');
 
             if (portalRole === 'medal') {
                 document.getElementById('nav-controls').classList.add('hidden');
-                backVaultBtn?.classList.add('hidden');
+                backVaultBtn.classList.add('hidden');
             } else {
                 // Personal role
-                backVaultBtn?.classList.remove('hidden');
+                backVaultBtn.classList.remove('hidden');
                 document.getElementById('nav-controls').classList.remove('hidden');
                 const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'system'];
-                tabs.forEach(t => document.getElementById('btn-' + t)?.classList.add('hidden'));
-                document.getElementById('btn-chat')?.classList.remove('hidden');
-                document.getElementById('btn-chat')?.classList.add('flex-1');
+                tabs.forEach(t => document.getElementById('btn-' + t).classList.add('hidden'));
+                document.getElementById('btn-chat').classList.remove('hidden');
+                document.getElementById('btn-chat').classList.add('flex-1');
             }
         } else {
-            document.getElementById('btn-back-vault')?.classList.add('hidden');
+            document.getElementById('btn-back-vault').classList.add('hidden');
             document.getElementById('stats-container').classList.remove('hidden'); document.getElementById('nav-controls').classList.remove('hidden'); document.getElementById('admin-controls').classList.remove('hidden');
             [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.remove('hidden'));
             const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'chat'];
-            tabs.forEach(t => document.getElementById('btn-' + t)?.classList.remove('hidden'));
+            tabs.forEach(t => document.getElementById('btn-' + t).classList.remove('hidden'));
             const sysBtn = document.getElementById('btn-system'); if (portalRole === 'superadmin') sysBtn.classList.remove('hidden'); else sysBtn.classList.add('hidden');
         }
 
@@ -2642,6 +2800,33 @@
             }
             const m = medalMap[emp.employee_no] || { gold: 0, silver: 0 }; let icons = ''; for(let i=0; i<m.gold; i++) icons += '<i class="fa-solid fa-medal text-amber-400 text-[10px] shadow-[0_0_8px_rgba(251,191,36,0.4)]"></i>'; for(let i=0; i<m.silver; i++) icons += '<i class="fa-solid fa-medal text-slate-400 text-[10px] shadow-[0_0_8px_rgba(148,163,184,0.4)]"></i>';
 
+            const getOrdinal = (n) => {
+                const s = ["th", "st", "nd", "rd"], v = n % 100;
+                return s[(v - 20) % 10] || s[v] || s[0];
+            };
+
+            const lateLevel = parseInt(emp.late_offence_level || emp.lateOffenceLevel || 0);
+            const absentLevel = parseInt(emp.absent_offence_level || emp.absentOffenceLevel || 0);
+            const hamperingLevel = parseInt(emp.hampering_offence_level || emp.hamperingOffenceLevel || 0);
+            let customOffences = emp.custom_offences || emp.customOffences || [];
+            if (typeof customOffences === 'string' && customOffences.trim()) { try { customOffences = JSON.parse(customOffences); } catch(e) { customOffences = []; } }
+
+            let activeDaHtml = '';
+            if (lateLevel > 0 || absentLevel > 0 || hamperingLevel > 0 || (Array.isArray(customOffences) && customOffences.some(o => (o.level || 0) > 0))) {
+                activeDaHtml = `<div class="mt-2 flex flex-wrap gap-1">`;
+                if (lateLevel > 0) activeDaHtml += `<span class="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[7px] font-black uppercase tracking-widest">Lates: ${lateLevel}${getOrdinal(lateLevel)} Offence</span>`;
+                if (absentLevel > 0) activeDaHtml += `<span class="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[7px] font-black uppercase tracking-widest">Absent: ${absentLevel}${getOrdinal(absentLevel)} Offence</span>`;
+                if (hamperingLevel > 0) activeDaHtml += `<span class="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[7px] font-black uppercase tracking-widest">Hampering: ${hamperingLevel}${getOrdinal(hamperingLevel)} Offence</span>`;
+
+                if (Array.isArray(customOffences)) {
+                    customOffences.forEach(offence => {
+                        const level = parseInt(offence.level || 0);
+                        if (level > 0) activeDaHtml += `<span class="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[7px] font-black uppercase tracking-widest">${offence.name}: ${level}${getOrdinal(level)} Offence</span>`;
+                    });
+                }
+                activeDaHtml += `</div>`;
+            }
+
             const perfScore = emp.performance_score ? `<div class="mt-1 flex items-center gap-1.5"><span class="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Perf: ${emp.performance_score.toFixed(1)}</span><div class="h-1 w-10 bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: ${(emp.performance_score/3)*100}%"></div></div></div>` : '';
 
             const displayPos = emp.position || emp.scheduler_position;
@@ -2663,7 +2848,7 @@
                 ? `<button onclick="openPrivateChat('${emp.employee_no}')" class="ml-2 text-cyan-400 hover:text-cyan-300 transition-colors text-[10px]" title="Send Message"><i class="fa-solid fa-comment-dots"></i></button>`
                 : '';
 
-            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-6 py-4"><div class="flex items-start gap-3"><div class="min-w-[100px] pt-1"><span class="glass-badge badge-cyan !text-[8px] !py-0.5 !px-2">${displayPos}</span></div><div class="w-10 h-10 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-xs tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div>${badgeHtml}<p class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-0.5">${icons}</div>${perfScore}<p class="text-[10px] text-space-400 mt-0.5 opacity-70">${emp.email || ''}</p></div></div></td><td class="px-6 py-4"><p class="text-[10px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[10px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p></td><td class="px-6 py-4"><div class="space-y-1 font-mono text-[10px] text-slate-300"><div class="flex items-center"><span class="w-8 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-2">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-8 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-2">${emp.tin_number || '--'}</span></div></div></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-[10px] text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-6 py-4"><div class="flex flex-wrap gap-1 mb-1 max-w-[200px]"><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">C: ${emp.uniform_cap || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">A: ${emp.uniform_apron || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">S: ${emp.uniform_shirt || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">P: ${emp.uniform_pants || 0}</span></div><span class="glass-badge badge-emerald inline-block mt-0.5 !text-[8px] !py-0.5 !px-2">${emp.is_certified ? 'Certified' : 'Uncertified'}</span></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-cyan-400 font-mono mt-0.5 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-6 py-4"><div class="flex items-start gap-3"><div class="min-w-[100px] pt-1"><span class="glass-badge badge-cyan !text-[8px] !py-0.5 !px-2">${displayPos}</span></div><div class="w-10 h-10 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-xs tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div>${badgeHtml}<p class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-0.5">${icons}</div>${perfScore}${activeDaHtml}<p class="text-[10px] text-slate-400 mt-0.5 opacity-80">${emp.phone_number || emp.cp_number || 'No CP'}</p><p class="text-[9px] text-space-400 opacity-60">${emp.email || ''}</p></div></div></td><td class="px-6 py-4"><p class="text-[10px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[10px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p></td><td class="px-6 py-4"><div class="space-y-1 font-mono text-[10px] text-slate-300"><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-2">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-2">${emp.tin_number || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PHILH</span><span class="ml-2">${emp.phil_health || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PAGIBIG</span><span class="ml-2">${emp.pagibig || '--'}</span></div></div></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-[10px] text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-6 py-4"><div class="flex flex-wrap gap-1 mb-1 max-w-[200px]"><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">C: ${emp.uniform_cap || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">A: ${emp.uniform_apron || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">S: ${emp.uniform_shirt || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">P: ${emp.uniform_pants || 0}</span></div><div class="text-[8px] text-cyan-400/90 font-bold space-y-0.5 my-1"><p>Shirt: ${emp.shirt_size || '--'}</p><p>Pants: ${emp.pants_size || '--'}</p></div><span class="glass-badge badge-emerald inline-block mt-0.5 !text-[8px] !py-0.5 !px-2">${emp.is_certified ? 'Certified' : 'Uncertified'}</span></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-cyan-400 font-mono mt-0.5 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
         });
         container.innerHTML = html + `</tbody></table></div>`;
     }
@@ -2697,8 +2882,9 @@
     }
 
     async function renderScheduler(container) {
+        console.log("Rendering scheduler for:", currentSchedDate);
         const startOfWeek = getStartOfWeek(currentSchedDate);
-        const weekDays = [];
+        weekDays = [];
         const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
         for(let i=0; i<7; i++) {
@@ -2712,20 +2898,20 @@
         const { data } = await sb.from('employee_schedules').select('*').in('date', weekDays);
         weeklySchedules = data || [];
 
-        let html = `
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+        var html = `
             <div class="p-4 flex flex-col md:flex-row items-center justify-between bg-space-950/40 border-b border-white/5 gap-4 sched-controls-container">
                 <div class="flex items-center gap-2">
                     <button onclick="changeSchedWeek(-1)" class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-space-950/50 border border-white/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20"><i class="fa-solid fa-chevron-left text-xs"></i></button>
                     <span class="text-[10px] md:text-xs font-black text-white uppercase tracking-wider min-w-[130px] md:min-w-[200px] text-center sched-week-label">Week of ${startOfWeek.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</span>
                     <button onclick="changeSchedWeek(1)" class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-space-950/50 border border-white/10 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.toggleSchedulerOrder()" class="bg-space-950/50 border border-white/10 text-cyan-400 px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20">
-                        ${showSchedulerOrder ? 'Hide Rank' : 'Show Rank'}
-                    </button>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    ${isAdmin ? `<button onclick="window.openAddPersonnelToSched()" class="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-emerald-500/30"><i class="fa-solid fa-user-plus mr-1"></i> Add Personnel</button>` : ''}
+                    <button onclick="window.toggleSchedulerOrder()" class="bg-space-950/50 border border-white/10 text-cyan-400 px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-cyan-500/20">${showSchedulerOrder ? 'Hide Rank' : 'Show Rank'}</button>
                     <div class="flex gap-1 md:gap-2">
-                        ${dayNames.map((name, i) => {
-                            const isHidden = hiddenSchedDayIndices.has(i);
+                        ${dayNames.map(function(name, i) {
+                            var isHidden = hiddenSchedDayIndices.has(i);
                             return `<button onclick="toggleSchedDay(${i})" class="sched-day-btn w-8 h-8 md:w-10 md:h-10 rounded-full text-[10px] md:text-xs font-black uppercase transition-all ${isHidden ? 'bg-space-800 text-space-500' : 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'}">${name[0]}</button>`;
                         }).join('')}
                     </div>
@@ -2735,35 +2921,28 @@
                 <table class="sched-table">
                     <colgroup>
                         <col style="width: 14%;">
-                        ${weekDays.map((d, i) => {
+                        ${weekDays.map(function(d, i) {
                             if (hiddenSchedDayIndices.has(i)) return '';
-                            return `<col style="width: 11%;">`;
+                            return '<col style="width: 11%;">';
                         }).join('')}
                     </colgroup>
                     <tbody>
         `;
 
         const excludedPositions = ["assistant manager", "administrator", "manager", "coordinator"];
-        const activeEmps = employees.filter(e => {
+        const activeEmps = employees.filter(function(e) {
             const pos = (e.position || "").toLowerCase();
-            const isExcluded = pos.includes('excrew') || excludedPositions.some(p => pos.includes(p));
+            const isExcluded = pos.includes('excrew') || excludedPositions.some(function(p) { return pos.includes(p); });
             if (isExcluded) return false;
 
             const targetId = e.id || e.employee_no;
-            const hasSchedThisWeek = weeklySchedules.some(s =>
-                (s.employee_id === targetId || s.employee_id === e.id || s.employee_id === e.employee_no) &&
-                s.tag !== 'HIDDEN' && s.schedule_text
-            );
+            // Only show if there is ANY schedule entry for this employee this week
+            const hasEntryThisWeek = weeklySchedules.some(function(s) {
+                return (s.employee_id === targetId || s.employee_id === e.id || s.employee_id === e.employee_no) &&
+                       (s.schedule_text || s.tag || s.position || s.scheduler_order !== undefined);
+            });
 
-            if (hasSchedThisWeek) return true;
-
-            const isHiddenThisWeek = weeklySchedules.some(s =>
-                (s.employee_id === targetId || s.employee_id === e.id || s.employee_id === e.employee_no) &&
-                s.date === weekDays[0] &&
-                s.tag === 'HIDDEN'
-            );
-
-            return !e.is_hidden_from_scheduler && !isHiddenThisWeek;
+            return hasEntryThisWeek;
         });
 
         const diningPositions = ["dine in", "cic", "dj", "dispatch", "cashier", "sc", "senior crew"];
@@ -2815,19 +2994,20 @@
             return { bg: "#ffffff", text: "#000000" };
         }
 
-        const grouped = activeEmps.reduce((acc, emp) => {
-            const mondayDate = weekDays[0];
-            const weeklyOverride = weeklySchedules.find(s => s.employee_id === emp.employee_no && s.date === mondayDate)?.position;
-            const pos = (weeklyOverride || emp.scheduler_position || emp.position || "Crew").toLowerCase();
+        var grouped = activeEmps.reduce(function(acc, emp) {
+            var mondayDate = weekDays[0];
+            var mRec = weeklySchedules.find(function(s) { return s.employee_id === emp.employee_no && s.date === mondayDate; });
+            var weeklyOverride = mRec ? mRec.position : null;
+            var pos = (weeklyOverride || emp.scheduler_position || emp.position || "Crew").toLowerCase();
             if (!acc[pos]) acc[pos] = [];
             acc[pos].push(emp);
             return acc;
         }, {});
 
-        const visibleDaysCount = 7 - hiddenSchedDayIndices.size;
-        const totalColspan = 1 + visibleDaysCount;
+        var visibleDaysCount = 7 - hiddenSchedDayIndices.size;
+        var totalColspan = 1 + visibleDaysCount;
 
-        const renderUnit = (title, positionsInUnit, bgColor, textColor) => {
+        var renderUnit = function(title, positionsInUnit, bgColor, textColor) {
             let unitHtml = `
                 <tr style="height: 12px; background-color: transparent;"><td colspan="${totalColspan}" style="border: none;"></td></tr>
                 <tr><td colspan="${totalColspan}" class="sched-header-unit" style="background-color: ${bgColor}; color: ${textColor};">${title}</td></tr>
@@ -2848,39 +3028,45 @@
                             }).join('')}
                         </tr>
                     `;
-                    grouped[pos].sort((a, b) => {
-                        const mDate = weekDays[0];
-                        const orderA = weeklySchedules.find(s => s.employee_id === a.employee_no && s.date === mDate)?.scheduler_order ?? a.scheduler_order;
-                        const orderB = weeklySchedules.find(s => s.employee_id === b.employee_no && s.date === mDate)?.scheduler_order ?? b.scheduler_order;
-                        if ((orderA || 0) !== (orderB || 0)) {
-                            return (orderA || 0) - (orderB || 0);
+                    grouped[pos].sort(function(a, b) {
+                        var mDate = weekDays[0];
+                        var sA = weeklySchedules.find(function(s) { return s.employee_id === a.employee_no && s.date === mDate; });
+                        var orderA = (sA && sA.scheduler_order !== undefined && sA.scheduler_order !== null) ? sA.scheduler_order : (a.scheduler_order || 0);
+
+                        var sB = weeklySchedules.find(function(s) { return s.employee_id === b.employee_no && s.date === mDate; });
+                        var orderB = (sB && sB.scheduler_order !== undefined && sB.scheduler_order !== null) ? sB.scheduler_order : (b.scheduler_order || 0);
+
+                        if (orderA !== orderB) {
+                            return orderA - orderB;
                         }
                         return (a.first_name || "").localeCompare(b.first_name || "");
-                    }).forEach(emp => {
-                        const targetId = emp.employee_no;
-                        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+                    }).forEach(function(emp) {
+                        var targetId = emp.employee_no;
+                        var isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
                         unitHtml += `
                             <tr>
                                 <td class="sched-name-cell">
-                                    ${(() => {
-                                        const mDate = weekDays[0];
-                                        const mRec = weeklySchedules.find(s => s.employee_id === emp.employee_no && s.date === mDate);
-                                        const order = mRec?.scheduler_order ?? emp.scheduler_order ?? 0;
-                                        const name = mRec?.employee_name ?? emp.first_name;
+                                    ${(function() {
+                                        var mDate = weekDays[0];
+                                        var mRec = weeklySchedules.find(function(s) { return s.employee_id === emp.employee_no && s.date === mDate; });
+                                        var order = (mRec && mRec.scheduler_order !== undefined && mRec.scheduler_order !== null) ? mRec.scheduler_order : (emp.scheduler_order || 0);
+                                        var name = (mRec && mRec.employee_name) ? mRec.employee_name : (emp.first_name || "Node");
                                         return showSchedulerOrder ? (order + '. ' + name) : name;
                                     })()}
                                 </td>
-                                ${weekDays.map((date, i) => {
+                                ${weekDays.map(function(date, i) {
                                     if (hiddenSchedDayIndices.has(i)) return '';
-                                    const sched = weeklySchedules.find(s => (s.employee_id === emp.employee_no) && s.date === date);
-                                    const text = sched?.schedule_text || sched?.tag || "";
-                                    const colors = getCellColors(text);
+                                    var sched = weeklySchedules.find(function(s) { return (s.employee_id === emp.employee_no) && s.date === date; });
+                                    var text = (sched && (sched.schedule_text || sched.tag)) ? (sched.schedule_text || sched.tag) : "";
+                                    var superText = (sched && sched.superscript) ? sched.superscript : "";
+                                    var colors = getCellColors(text);
                                     return `
                                         <td class="sched-cell" style="background-color: ${colors.bg};">
                                             <div ${isAdmin ? `onclick="openSchedEdit('${targetId}', '${emp.first_name}', '${date}')"` : ''}
-                                                 style="width: 100%; min-height: 24px; display: flex; align-items: center; justify-content: center; color: ${colors.text};"
-                                                 class="${isAdmin ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''} text-center">
-                                                ${text || '&nbsp;'}
+                                                 style="width: 100%; min-height: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: ${colors.text};"
+                                                 class="${isAdmin ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''} text-center relative">
+                                                ${superText ? `<span style="font-size: 6.5px; position: absolute; top: 1px; line-height: 1; font-weight: 900; opacity: 0.7; letter-spacing: 0.05em;">${superText}</span>` : ''}
+                                                <span style="margin-top: ${superText ? '4px' : '0'}">${text || '&nbsp;'}</span>
                                             </div>
                                         </td>`;
                                 }).join('')}
@@ -2892,67 +3078,79 @@
             return hasEmployees ? unitHtml : "";
         };
 
-        // Render sections
-        html += renderUnit("Dining Unit", diningPositions, "#E0F7FA", "#006064");
-        html += renderUnit("Kitchen Unit", kitchenPositions, "#FFF3E0", "#E65100");
+        try {
+            // Render sections
+            html += renderUnit("Dining Unit", diningPositions, "#E0F7FA", "#006064");
+            html += renderUnit("Kitchen Unit", kitchenPositions, "#FFF3E0", "#E65100");
 
-        // Render remaining positions
-        const otherPositions = Object.keys(grouped).filter(p => !diningPositions.includes(p) && !kitchenPositions.includes(p));
-        html += renderUnit("Management / Support", otherPositions, "#F5F5F5", "#333333");
+            // Render remaining positions
+            const otherPositions = Object.keys(grouped).filter(function(p) {
+                return !diningPositions.includes(p) && !kitchenPositions.includes(p);
+            });
+            html += renderUnit("Management / Support", otherPositions, "#F5F5F5", "#333333");
 
-        container.innerHTML = html + `</tbody></table></div>`;
+            container.innerHTML = html + `</tbody></table></div>`;
+        } catch (e) {
+            console.error("Scheduler Render Error:", e);
+            container.innerHTML = `<div class="p-32 text-center text-rose-400 font-bold uppercase text-xs">Render Error: ${e.message}</div>`;
+        }
     }
 
     let editingSched = { empNo: null, date: null };
 
     function openSchedEdit(empId, name, date) {
-        editingSched = { empId, date };
-        const mondayDate = getStartOfWeek(new Date(date)).toISOString().split('T')[0];
-        document.getElementById('sched-edit-title').innerText = `${name} • ${new Date(date).toDateString()}`;
-        const existing = weeklySchedules.find(s => s.employee_id === empId && s.date === date);
-        const mondayRec = weeklySchedules.find(s => s.employee_id === empId && s.date === mondayDate);
-        const emp = employees.find(e => e.employee_no === empId || e.id === empId);
+        editingSched = { empId: empId, date: date };
+        var mondayDate = getStartOfWeek(new Date(date)).toISOString().split('T')[0];
+        document.getElementById('sched-edit-title').innerText = name + ' • ' + new Date(date).toDateString();
+        var existing = weeklySchedules.find(function(s) { return s.employee_id === empId && s.date === date; });
+        var mondayRec = weeklySchedules.find(function(s) { return s.employee_id === empId && s.date === mondayDate; });
+        var emp = employees.find(function(e) { return e.employee_no === empId || e.id === empId; });
 
-        document.getElementById('sched-shift-select').value = existing?.schedule_text || "";
-        document.getElementById('sched-station-select').value = mondayRec?.position || "";
-        document.getElementById('sched-order-input').value = mondayRec?.scheduler_order ?? emp?.scheduler_order ?? 0;
+        document.getElementById('sched-shift-select').value = (existing && existing.schedule_text) ? existing.schedule_text : "";
+        document.getElementById('sched-station-select').value = (mondayRec && mondayRec.position) ? mondayRec.position : "";
+        document.getElementById('sched-order-input').value = (mondayRec && (mondayRec.scheduler_order !== undefined) && (mondayRec.scheduler_order !== null)) ? mondayRec.scheduler_order : ((emp && (emp.scheduler_order !== undefined)) ? emp.scheduler_order : 0);
+        document.getElementById('sched-super-input').value = (existing && existing.superscript) ? existing.superscript : "";
         document.getElementById('scheduler-edit-modal').classList.remove('hidden');
     }
 
     async function saveScheduleEntry() {
-        const shift = document.getElementById('sched-shift-select').value;
-        const station = document.getElementById('sched-station-select').value;
-        const orderInput = document.getElementById('sched-order-input').value;
-        const orderVal = orderInput !== "" ? parseInt(orderInput) : null;
+        var shift = document.getElementById('sched-shift-select').value;
+        var station = document.getElementById('sched-station-select').value;
+        var orderInput = document.getElementById('sched-order-input').value;
+        var superText = document.getElementById('sched-super-input').value;
+        var orderVal = orderInput !== "" ? parseInt(orderInput) : null;
 
-        const btn = document.getElementById('btn-save-sched'); btn.innerText = "Syncing..."; btn.disabled = true;
+        var btn = document.getElementById('btn-save-sched'); btn.innerText = "Syncing..."; btn.disabled = true;
         try {
-            const mondayDate = getStartOfWeek(new Date(editingSched.date)).toISOString().split('T')[0];
+            var mondayDate = getStartOfWeek(new Date(editingSched.date)).toISOString().split('T')[0];
 
-            // 1. Save shift (Current Date)
-            if (shift) {
-                const { error } = await sb.from('employee_schedules').upsert({
+            // 1. Save shift & superscript (Current Date)
+            if (shift || superText) {
+                var payload = {
                     employee_id: editingSched.empId,
                     date: editingSched.date,
-                    schedule_text: shift,
                     tag: null
-                }, { onConflict: 'employee_id,date' });
-                if(error) throw error;
+                };
+                if (shift) payload.schedule_text = shift;
+                if (superText) payload.superscript = superText;
+
+                var result = await sb.from('employee_schedules').upsert(payload, { onConflict: 'employee_id,date' });
+                if(result.error) throw result.error;
             }
 
             // 2. Save Station & Order & Name Override (Monday of this week)
             if (station !== undefined || orderVal !== null) {
-                const emp = employees.find(e => e.employee_no === editingSched.empId || e.id === editingSched.empId);
-                const payload = {
+                var emp = employees.find(function(e) { return e.employee_no === editingSched.empId || e.id === editingSched.empId; });
+                var payload2 = {
                     employee_id: editingSched.empId,
                     date: mondayDate
                 };
-                if (station) payload.position = station;
-                if (orderVal !== null) payload.scheduler_order = orderVal;
-                if (emp) payload.employee_name = emp.first_name;
+                if (station) payload2.position = station;
+                if (orderVal !== null) payload2.scheduler_order = orderVal;
+                if (emp) payload2.employee_name = emp.first_name;
 
-                const { error } = await sb.from('employee_schedules').upsert(payload, { onConflict: 'employee_id,date' });
-                if(error) throw error;
+                var result2 = await sb.from('employee_schedules').upsert(payload2, { onConflict: 'employee_id,date' });
+                if(result2.error) throw result2.error;
             }
 
             closeSchedModal();
@@ -3047,7 +3245,60 @@
         renderMain();
     }
 
-    window.toggleSchedulerOrder = () => {
+    window.openAddPersonnelToSched = function() {
+        var select = document.getElementById('add-sched-emp-select');
+        var sorted = employees.slice().sort(function(a, b) {
+            return (a.first_name || "").localeCompare(b.first_name || "");
+        });
+
+        var html = '<option value="">Select Crew...</option>';
+        sorted.forEach(function(e) {
+            html += '<option value="' + e.employee_no + '">' + e.first_name + ' ' + (e.last_name || '') + '</option>';
+        });
+        select.innerHTML = html;
+
+        document.getElementById('add-sched-pos-select').value = "";
+        document.getElementById('add-personnel-modal').classList.remove('hidden');
+    };
+
+    window.saveAddPersonnelToSched = async function() {
+        var empNo = document.getElementById('add-sched-emp-select').value;
+        var pos = document.getElementById('add-sched-pos-select').value;
+        if(!empNo || !pos) return alert("Security Protocol: Select personnel and station.");
+
+        var emp = employees.find(function(e) { return e.employee_no === empNo; });
+        var startOfWeek = getStartOfWeek(currentSchedDate);
+        var mondayDate = getISOStr(startOfWeek);
+
+        var btn = document.getElementById('btn-add-personnel-save');
+        btn.innerText = "Syncing..."; btn.disabled = true;
+
+        try {
+            const result = await sb.from('employee_schedules').upsert({
+                employee_id: empNo,
+                date: mondayDate,
+                position: pos,
+                employee_name: emp.first_name,
+                scheduler_order: 0
+            }, { onConflict: 'employee_id,date' });
+
+            if(result.error) throw result.error;
+
+            document.getElementById('add-personnel-modal').classList.add('hidden');
+
+            // Re-fetch schedules to show the new person
+            const fetchResult = await sb.from('employee_schedules').select('*').in('date', weekDays);
+            if (fetchResult.data) weeklySchedules = fetchResult.data;
+
+            renderMain();
+        } catch(e) {
+            alert("Uplink Failed: " + (e.message || "Unknown error"));
+        } finally {
+            btn.innerText = "Add to Schedule"; btn.disabled = false;
+        }
+    };
+
+    window.toggleSchedulerOrder = function() {
         showSchedulerOrder = !showSchedulerOrder;
         renderMain();
     };
@@ -3150,9 +3401,9 @@
                     <!-- Input Area -->
                     <div class="p-4 md:p-8 bg-space-900/60 border-t border-white/5">
                         <div id="emoji-picker" class="hidden flex flex-wrap gap-1.5 md:gap-2 mb-3 md:mb-4 p-2 md:p-3 bg-space-950 border border-white/10 rounded-2xl animate-in fade-in slide-in-from-bottom-2">
-                            ${["😊", "😂", "👍", "🙏", "🔥", "✨", "🙌", "❤️", "✅", "⚠️", "🕒", "📍"].map(e => `
-                                <button onclick="insertEmoji('${e}')" class="text-lg md:text-xl hover:scale-125 transition-transform p-1">${e}</button>
-                            `).join('')}
+                            ${["😊", "😂", "👍", "🙏", "🔥", "✨", "🙌", "❤️", "✅", "⚠️", "🕒", "📍"].map(function(e) {
+                                return `<button onclick="insertEmoji('${e}')" class="text-lg md:text-xl hover:scale-125 transition-transform p-1">${e}</button>`;
+                            }).join('')}
                         </div>
                         <div class="flex gap-2 md:gap-4 relative items-center">
                             <button onclick="toggleEmojiPicker()" class="text-space-400 hover:text-cyan-400 transition-colors text-lg md:text-xl">
@@ -3217,7 +3468,7 @@
                          ${window.activeChatTarget === 'group' ? '<i class="fa-solid fa-users text-sm"></i>' : `<img src="${getProfilePic(window.activeChatTarget)}" class="w-full h-full object-cover" onerror="this.style.display='none'">`}
                     </div>
                     <div class="overflow-hidden">
-                        <h3 id="active-chat-name" class="text-xs md:text-sm font-black text-white uppercase tracking-wider truncate">${window.activeChatTarget === 'group' ? 'Fleet Broadcast' : (targetEmp?.first_name || 'Unit Sync')}</h3>
+                        <h3 id="active-chat-name" class="text-xs md:text-sm font-black text-white uppercase tracking-wider truncate">${window.activeChatTarget === 'group' ? 'Fleet Broadcast' : (targetEmp.first_name || 'Unit Sync')}</h3>
                         <div class="flex items-center gap-1.5 md:gap-2"><div class="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-emerald-500 animate-pulse"></div><span class="text-[7px] md:text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Established</span></div>
                     </div>
                 </div>
@@ -3376,9 +3627,13 @@
                     const receiverId = String(msg.receiver_id || msg.receiverId);
                     if (receiverId === 'group' || receiverId === me || senderId === me) {
                         // Better duplicate detection using timestamp + sender
-                        const isDuplicate = allChatMessages.some(m => Number(m.id) === Number(msg.id) || (m.timestamp === msg.timestamp && String(m.sender_id) === senderId));
+                        const isDuplicate = allChatMessages.some(function(m) {
+                            return Number(m.id) === Number(msg.id) || (m.timestamp === msg.timestamp && String(m.sender_id) === senderId);
+                        });
                         if (isDuplicate) {
-                            const index = allChatMessages.findIndex(m => m.timestamp === msg.timestamp && String(m.sender_id) === senderId);
+                            const index = allChatMessages.findIndex(function(m) {
+                                return m.timestamp === msg.timestamp && String(m.sender_id) === senderId;
+                            });
                             if (index !== -1) allChatMessages[index].id = msg.id;
                             return;
                         }
@@ -3427,3 +3682,4 @@
 </script>
 </body>
 </html>
+
