@@ -340,14 +340,25 @@ class AttendanceViewModel(
 
     fun login(employeeNo: String, passwordHash: String, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            // Secure Admin Login from Supabase Settings
-            val adminUser = supabaseSync.getSetting("admin_username") ?: "fusion"
-            val adminPass = supabaseSync.getSetting("admin_portal_pass") ?: "chowking2026"
-            val chowkingUser = supabaseSync.getSetting("chowking_username") ?: "chowking"
-            val chowkingPass = supabaseSync.getSetting("chowking_portal_pass") ?: "chowking2026"
+            // Secure Admin Login from Supabase Settings / Local Preferences
+            val adminUser = prefs.getString("admin_username", null)
+                ?: supabaseSync.getSetting("admin_username")
+                ?: "fusion"
+            val adminPass = prefs.getString("admin_portal_pass", null)
+                ?: supabaseSync.getSetting("admin_portal_pass")
+                ?: ""
+            val chowkingUser = prefs.getString("chowking_username", null)
+                ?: supabaseSync.getSetting("chowking_username")
+                ?: "chowking"
+            val chowkingPass = prefs.getString("chowking_portal_pass", null)
+                ?: supabaseSync.getSetting("chowking_portal_pass")
+                ?: ""
 
-            if ((employeeNo == adminUser || employeeNo == chowkingUser) && 
-                (passwordHash == adminPass || passwordHash == chowkingPass)) {
+            val isAdminMatched = (employeeNo == adminUser || employeeNo == chowkingUser) &&
+                ((adminPass.isNotBlank() && passwordHash == adminPass) || 
+                 (chowkingPass.isNotBlank() && passwordHash == chowkingPass))
+
+            if (isAdminMatched) {
                 
                 val existing = repository.getEmployeeByNo(employeeNo)
                 val admin = if (existing != null) {
@@ -2046,13 +2057,25 @@ class AttendanceViewModel(
         }
     }
 
+    fun saveAdminSetting(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+        _settingsUpdated.value++
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                supabaseSync.saveSetting(key, value)
+            } catch (e: Exception) {
+                Log.e("AttendanceViewModel", "Failed to save setting $key: ${e.message}")
+            }
+        }
+    }
+
     fun getPortalUsername(): String = prefs.getString("portal_username", null)
-        ?: prefs.getString("permit_portal_user", "smtp_smckmall_058184")
-        ?: "smtp_smckmall_058184"
+        ?: prefs.getString("permit_portal_user", null)
+        ?: ""
 
     fun getPortalPassword(): String = prefs.getString("portal_password", null)
-        ?: prefs.getString("permit_portal_pass", "Chowking@1433")
-        ?: "Chowking@1433"
+        ?: prefs.getString("permit_portal_pass", null)
+        ?: ""
 
     class Factory(
         private val repository: AttendanceRepository,

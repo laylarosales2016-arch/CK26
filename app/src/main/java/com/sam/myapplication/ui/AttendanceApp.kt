@@ -7877,8 +7877,8 @@ class PermitWebBridge(
 @Composable
 fun PermitWebViewScreen(
     viewModel: AttendanceViewModel, 
-    portalUser: String? = "smtp_smckmall_058184",
-    portalPass: String? = "Chowking@1433",
+    portalUser: String? = null,
+    portalPass: String? = null,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -7895,9 +7895,12 @@ fun PermitWebViewScreen(
     var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
     val employees by viewModel.allEmployees.collectAsState()
 
+    val activePortalUser = portalUser.takeIf { !it.isNullOrBlank() } ?: viewModel.getPortalUsername()
+    val activePortalPass = portalPass.takeIf { !it.isNullOrBlank() } ?: viewModel.getPortalPassword()
+
     if (showCredsDialog) {
-        var newPUser by remember { mutableStateOf(viewModel.getPortalUsername()) }
-        var newPPass by remember { mutableStateOf(viewModel.getPortalPassword()) }
+        var newPUser by remember { mutableStateOf(activePortalUser) }
+        var newPPass by remember { mutableStateOf(activePortalPass) }
         
         AlertDialog(
             onDismissRequest = { showCredsDialog = false },
@@ -7978,8 +7981,8 @@ fun PermitWebViewScreen(
     // Automated Login Script
     val loginJs = """
         (function() {
-            var user = '$portalUser';
-            var pass = '$portalPass';
+            var user = '$activePortalUser';
+            var pass = '$activePortalPass';
             
             function simulateHumanInput(el, value) {
                 if (!el) return;
@@ -9205,18 +9208,21 @@ fun PayslipWebViewScreen(
 fun ExternalWebViewScreen(
     url: String,
     title: String,
-    portalUser: String? = "smtp_smckmall_058184",
-    portalPass: String? = "Chowking@1433",
+    portalUser: String? = null,
+    portalPass: String? = null,
     onBack: () -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     val standardUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+    val activePortalUser = portalUser ?: ""
+    val activePortalPass = portalPass ?: ""
+
     val loginJs = """
         (function() {
-            var user = '$portalUser';
-            var pass = '$portalPass';
+            var user = '$activePortalUser';
+            var pass = '$activePortalPass';
             
             function simulateHumanInput(el, value) {
                 if (!el) return;
