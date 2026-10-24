@@ -2026,8 +2026,33 @@ class AttendanceViewModel(
         }
     }
 
-    fun getPortalUsername(): String = prefs.getString("portal_username", "smtp_smckmall_058184") ?: "smtp_smckmall_058184"
-    fun getPortalPassword(): String = prefs.getString("portal_password", "cJEjZn") ?: "cJEjZn"
+    fun savePortalCredentials(user: String, pass: String) {
+        prefs.edit()
+            .putString("portal_username", user)
+            .putString("portal_password", pass)
+            .putString("permit_portal_user", user)
+            .putString("permit_portal_pass", pass)
+            .apply()
+        _settingsUpdated.value++
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                supabaseSync.saveSetting("portal_username", user)
+                supabaseSync.saveSetting("portal_password", pass)
+                supabaseSync.saveSetting("permit_portal_user", user)
+                supabaseSync.saveSetting("permit_portal_pass", pass)
+            } catch (e: Exception) {
+                Log.e("AttendanceViewModel", "Failed to save portal credentials: ${e.message}")
+            }
+        }
+    }
+
+    fun getPortalUsername(): String = prefs.getString("portal_username", null)
+        ?: prefs.getString("permit_portal_user", "smtp_smckmall_058184")
+        ?: "smtp_smckmall_058184"
+
+    fun getPortalPassword(): String = prefs.getString("portal_password", null)
+        ?: prefs.getString("permit_portal_pass", "Chowking@1433")
+        ?: "Chowking@1433"
 
     class Factory(
         private val repository: AttendanceRepository,

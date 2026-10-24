@@ -6951,6 +6951,7 @@ fun EditEmployeeScreen(
     onBack: () -> Unit
 ) {
     val employees by viewModel.allEmployees.collectAsState()
+    val loggedInEmployee by viewModel.loggedInEmployee.collectAsState()
     val employee = employees.find { it.id == employeeId }
 
     if (employee != null) {
@@ -7271,12 +7272,12 @@ fun EditEmployeeScreen(
                 )
                 OutlinedTextField(value = payrollPassword, onValueChange = { payrollPassword = it }, label = { Text("Payroll Password") }, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
 
-                val isTargetAdmin = employees.find { it.id == employeeId }?.isAdmin == true
+                val isTargetAdmin = isAdmin || employee.isAdmin == true || loggedInEmployee?.isAdmin == true
                 if (isTargetAdmin) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                    Text("Portal Auto-Login Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Portal Auto-Login Details (Permit Dashboard)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(value = portalUsername, onValueChange = { portalUsername = it }, label = { Text("Portal Username") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = portalPassword, onValueChange = { portalPassword = it }, label = { Text("Portal Password") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = portalPassword, onValueChange = { portalPassword = it }, label = { Text("Portal Password") }, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 }
 
@@ -7816,12 +7817,68 @@ fun convertTo12Hour(time24: String?): String {
     }
 }
 
+class PermitWebBridge(
+    private val viewModel: AttendanceViewModel,
+    private val scope: kotlinx.coroutines.CoroutineScope,
+    private val context: android.content.Context
+) {
+    @android.webkit.JavascriptInterface
+    fun onPermitsScraped(json: String) {
+        try {
+            val jsonConfig = Json { ignoreUnknownKeys = true }
+            val scrapedList = jsonConfig.decodeFromString<List<WorkPermit>>(json)
+            if (scrapedList.isNotEmpty()) {
+                viewModel.syncWorkPermits(scrapedList)
+            }
+        } catch (e: Exception) {
+            Log.e("PermitScrape", "Error parsing scraped permits", e)
+        }
+    }
+
+    @android.webkit.JavascriptInterface
+    fun onCaptureManual(ref: String, tabName: String, tabHtml: String, shellHtml: String) {
+        if (ref == "Unknown" || ref.isBlank()) {
+            scope.launch {
+                Toast.makeText(context, "Could not find Reference Number. Please ensure the page is fully loaded.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        viewModel.appendPermitCapture(ref, tabName, tabHtml, shellHtml)
+        scope.launch {
+            Toast.makeText(context, "Saved '$tabName' to permit $ref", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    @android.webkit.JavascriptInterface
+    fun onPageSaved(ref: String, html: String) {
+        if (ref == "Unknown" || ref.isBlank()) {
+            scope.launch {
+                Toast.makeText(context, "Could not find Reference Number. Please ensure the page is fully loaded.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        viewModel.updatePermitCache(ref, html)
+        scope.launch {
+            Toast.makeText(context, "Permit $ref fully saved for offline viewing!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    @android.webkit.JavascriptInterface
+    fun notifySavingStarted(ref: String) {
+        scope.launch {
+            Toast.makeText(context, "Saving Permit $ref and all its tabs... Please wait.", Toast.LENGTH_LONG).show()
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermitWebViewScreen(
     viewModel: AttendanceViewModel, 
     portalUser: String? = "smtp_smckmall_058184",
-    portalPass: String? = "cJEjZn",
+    portalPass: String? = "Chowking@1433",
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -7831,11 +7888,55 @@ fun PermitWebViewScreen(
     var isLoading by remember { mutableStateOf(true) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var showExpiredList by remember { mutableStateOf(false) }
+    var showCredsDialog by remember { mutableStateOf(false) }
     
     val permits by viewModel.allWorkPermits.collectAsState(initial = emptyList())
     var showAppraisalPicker by remember { mutableStateOf(false) }
     var targetAppraisalEmployee by remember { mutableStateOf<Employee?>(null) }
     val employees by viewModel.allEmployees.collectAsState()
+
+    if (showCredsDialog) {
+        var newPUser by remember { mutableStateOf(viewModel.getPortalUsername()) }
+        var newPPass by remember { mutableStateOf(viewModel.getPortalPassword()) }
+        
+        AlertDialog(
+            onDismissRequest = { showCredsDialog = false },
+            title = { Text("Change Permit Dashboard Credentials") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter login credentials for OMA Work Permit Portal:", style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = newPUser,
+                        onValueChange = { newPUser = it },
+                        label = { Text("Portal Username") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPPass,
+                        onValueChange = { newPPass = it },
+                        label = { Text("Portal Password") },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (newPUser.isNotBlank() && newPPass.isNotBlank()) {
+                        viewModel.savePortalCredentials(newPUser.trim(), newPPass.trim())
+                        Toast.makeText(context, "Permit Dashboard Credentials Updated!", Toast.LENGTH_SHORT).show()
+                        showCredsDialog = false
+                        webViewInstance?.reload()
+                    }
+                }) { Text("Save & Reload") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCredsDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
     
     if (showAppraisalPicker) {
         PerformanceAppraisalPicker(
@@ -7870,59 +7971,8 @@ fun PermitWebViewScreen(
     val permitUrl = "https://oma.smphi.com/TP_WorkPermit/"
     val standardUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-    // Interface to receive data from WebView
-    val webInterface = remember {
-        object {
-            @android.webkit.JavascriptInterface
-            fun onPermitsScraped(json: String) {
-                try {
-                    val jsonConfig = Json { ignoreUnknownKeys = true }
-                    val scrapedList = jsonConfig.decodeFromString<List<WorkPermit>>(json)
-                    if (scrapedList.isNotEmpty()) {
-                        viewModel.syncWorkPermits(scrapedList)
-                    }
-                } catch (e: Exception) {
-                    Log.e("PermitScrape", "Error parsing scraped permits", e)
-                }
-            }
-
-            @android.webkit.JavascriptInterface
-            fun onCaptureManual(ref: String, tabName: String, tabHtml: String, shellHtml: String) {
-                if (ref == "Unknown" || ref.isBlank()) {
-                    scope.launch {
-                        Toast.makeText(context, "Could not find Reference Number. Please ensure the page is fully loaded.", Toast.LENGTH_LONG).show()
-                    }
-                    return
-                }
-
-                viewModel.appendPermitCapture(ref, tabName, tabHtml, shellHtml)
-                scope.launch {
-                    Toast.makeText(context, "Saved '$tabName' to permit $ref", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            @android.webkit.JavascriptInterface
-            fun onPageSaved(ref: String, html: String) {
-                if (ref == "Unknown" || ref.isBlank()) {
-                    scope.launch {
-                        Toast.makeText(context, "Could not find Reference Number. Please ensure the page is fully loaded.", Toast.LENGTH_LONG).show()
-                    }
-                    return
-                }
-
-                viewModel.updatePermitCache(ref, html)
-                scope.launch {
-                    Toast.makeText(context, "Permit $ref fully saved for offline viewing!", Toast.LENGTH_SHORT).show()
-                }
-            }
-            
-            @android.webkit.JavascriptInterface
-            fun notifySavingStarted(ref: String) {
-                scope.launch {
-                    Toast.makeText(context, "Saving Permit $ref and all its tabs... Please wait.", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
+    val webInterface = remember(viewModel, scope, context) {
+        PermitWebBridge(viewModel, scope, context)
     }
 
     // Automated Login Script
@@ -8434,6 +8484,9 @@ fun PermitWebViewScreen(
                             webViewInstance?.evaluateJavascript(fullDownloadJs, null)
                         }) {
                             Icon(Icons.Default.Download, contentDescription = "Save Offline")
+                        }
+                        IconButton(onClick = { showCredsDialog = true }) {
+                            Icon(Icons.Default.Lock, contentDescription = "Change Portal Credentials")
                         }
                         IconButton(onClick = { webViewInstance?.loadUrl(permitUrl) }) {
                             Icon(Icons.Default.Home, contentDescription = "Dashboard")
@@ -9153,7 +9206,7 @@ fun ExternalWebViewScreen(
     url: String,
     title: String,
     portalUser: String? = "smtp_smckmall_058184",
-    portalPass: String? = "cJEjZn",
+    portalPass: String? = "Chowking@1433",
     onBack: () -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }

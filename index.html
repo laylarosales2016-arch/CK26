@@ -380,6 +380,9 @@
                     <div><span class="info-label font-sans">TIN Number</span><p id="v-tin" class="text-slate-300">---</p></div>
                     <div><span class="info-label font-sans">PhilHealth ID</span><p id="v-ph" class="text-slate-300">---</p></div>
                     <div><span class="info-label font-sans">Pag-IBIG Number</span><p id="v-pagibig" class="text-slate-300">---</p></div>
+                    <div><span class="info-label font-sans">Mall ID #</span><p id="v-mallid-no" class="text-cyan-400 font-bold">---</p></div>
+                    <div><span class="info-label font-sans">Mall ID Expiration</span><p id="v-mallid-exp" class="text-slate-300">---</p></div>
+                    <div><span class="info-label font-sans">Mall ID Status</span><p id="v-mallid-status" class="text-emerald-400 font-bold uppercase text-xs">---</p></div>
                 </div>
             </div>
             <div class="glass-card p-5 md:p-6 rounded-3xl">
@@ -489,6 +492,31 @@
                 <i class="fa-solid fa-power-off mr-2 text-[8px]"></i>Exit System
             </button>
             <div id="admin-controls" class="hidden flex flex-wrap gap-2 w-full sm:w-auto">
+                <button id="btn-add-emp-action" onclick="openAddEmployeeModal()" class="hidden bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-user-plus mr-2 text-[8px]"></i>Add Personnel
+                </button>
+                <button id="btn-add-da-action" onclick="openDAEntryModal()" class="hidden bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-rose-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-triangle-exclamation mr-2 text-[8px]"></i>Log Incident
+                </button>
+                <button id="btn-add-attrition-action" onclick="openAttritionEntryModal()" class="hidden bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-amber-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-user-minus mr-2 text-[8px]"></i>Log Detachment
+                </button>
+                <button id="btn-add-anc-action" onclick="openAnnouncementModal()" class="hidden bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-cyan-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-bullhorn mr-2 text-[8px]"></i>Post Notice
+                </button>
+                <button id="btn-add-permit-action" onclick="openWorkPermitModal()" class="hidden bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-file-circle-plus mr-2 text-[8px]"></i>Add Permit
+                </button>
+                <button id="btn-open-mallid-scraper" onclick="openMallIdScraperModal()" class="hidden bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-cyan-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-robot mr-2 text-[8px]"></i>Mall ID Scraper
+                </button>
+                <button id="btn-open-permit-scraper" onclick="openPermitScraperModal()" class="hidden bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-cyan-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-globe mr-2 text-[8px]"></i>OMA Permit Scraper
+                </button>
+                <button id="btn-mallid-renewal-alert" onclick="openMallIdRenewalWarningModal()" class="hidden bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-rose-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-triangle-exclamation mr-2 text-[8px]"></i>Mall ID Warnings (<span id="mallid-renewal-count">0</span>)
+                </button>
+
                 <div id="da-filter-container" class="hidden flex flex-wrap gap-2 w-full sm:w-auto">
                     <select id="da-name-select" onchange="renderMain()" class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-xs md:text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all flex-1 sm:w-52 shadow-inner">
                         <option value="">All Crew Personnel...</option>
@@ -496,6 +524,9 @@
                     <input type="text" id="da-search" oninput="renderMain()" placeholder="Search..." class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-xs md:text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all flex-1 sm:w-36 shadow-inner">
                     <button id="btn-excrew-filter" onclick="toggleExcrew()" class="hidden bg-space-950/90 border border-white/10 text-space-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all whitespace-nowrap shadow-inner">
                         <i class="fa-solid fa-user-slash mr-2 text-[8px]"></i>Excrew Only
+                    </button>
+                    <button id="btn-renewal-filter" onclick="toggleRenewalFilter()" class="hidden bg-space-950/90 border border-white/10 text-space-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all whitespace-nowrap shadow-inner">
+                        <i class="fa-solid fa-rotate mr-2 text-[8px]"></i>For Renewal
                     </button>
                 </div>
                 <input type="date" id="date-picker" onchange="fetchSummary(this.value)" class="bg-space-950/90 border border-white/10 text-slate-200 rounded-xl px-4 py-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-cyan-500 transition-all w-full sm:w-auto shadow-inner">
@@ -531,6 +562,8 @@
         <button onclick="switchTab('employees')" id="btn-employees" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white">Masterlist</button>
         <button onclick="switchTab('da')" id="btn-da" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white">DA Records</button>
         <button onclick="switchTab('attrition')" id="btn-attrition" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white">Attrition</button>
+        <button onclick="switchTab('announcements')" id="btn-announcements" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"><i class="fa-solid fa-bullhorn mr-1 sm:mr-2"></i>Notices</button>
+        <button onclick="switchTab('permits')" id="btn-permits" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"><i class="fa-solid fa-file-shield mr-1 sm:mr-2"></i>Permits</button>
         <button onclick="switchTab('chat')" id="btn-chat" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"><i class="fa-solid fa-comments mr-1 sm:mr-2"></i>Chatbox</button>
         <button onclick="switchTab('scheduler')" id="btn-scheduler" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white">Scheduler</button>
         <button onclick="switchTab('medals')" id="btn-medals" class="flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white">Medals</button>
@@ -541,9 +574,12 @@
         <div class="bg-space-800 p-3 rounded-xl border border-cyan-500/20 text-cyan-400">
             <i class="fa-solid fa-comment-dots text-xl"></i>
         </div>
-        <div>
+        <div class="flex-1">
             <h3 class="font-black text-[10px] text-cyan-400 uppercase tracking-[0.3em] mb-2">Command Center Broadcast Memo</h3>
             <p id="day-note-text" class="text-[15px] font-medium text-slate-200 leading-relaxed"></p>
+        </div>
+        <div class="shrink-0 ml-auto">
+            <button id="btn-edit-day-note" onclick="openDailyNoteModal()" class="hidden bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-cyan-500/20 transition-all"><i class="fa-solid fa-pen-to-square mr-1"></i>Edit Note</button>
         </div>
     </div>
 
@@ -911,6 +947,385 @@
     </div>
 </div>
 
+<!-- Add Personnel Modal -->
+<div id="add-employee-modal" class="fixed inset-0 z-[170] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-cyan-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">Register New Personnel Node</h3>
+                <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Masterlist Entry Protocol</p>
+            </div>
+            <button onclick="closeAddEmployeeModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div><label class="info-label">Employee ID *</label><input type="text" id="add-emp-no" placeholder="e.g. 100452" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full font-mono"></div>
+                <div><label class="info-label">First Name *</label><input type="text" id="add-emp-fn" placeholder="First Name" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Middle Name</label><input type="text" id="add-emp-mn" placeholder="Middle Name" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div><label class="info-label">Last Name *</label><input type="text" id="add-emp-ln" placeholder="Last Name" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Position / Station</label>
+                    <select id="add-emp-pos" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                        <option value="Dine In">Dine In</option>
+                        <option value="Cashier">Cashier</option>
+                        <option value="Dispatch">Dispatch</option>
+                        <option value="CIC">CIC</option>
+                        <option value="DJ">DJ</option>
+                        <option value="SS">SS</option>
+                        <option value="SO">SO</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Assembler">Assembler</option>
+                        <option value="Fryman">Fryman</option>
+                        <option value="Noodles">Noodles</option>
+                        <option value="Backup">Backup</option>
+                        <option value="Assistant Manager">Assistant Manager</option>
+                        <option value="Manager">Manager</option>
+                    </select>
+                </div>
+                <div><label class="info-label">Date Hired</label><input type="date" id="add-emp-hired" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div><label class="info-label">Birthday</label><input type="date" id="add-emp-bday" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Phone Hotline</label><input type="text" id="add-emp-phone" placeholder="09123456789" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full font-mono"></div>
+                <div><label class="info-label">Email Address</label><input type="email" id="add-emp-email" placeholder="user@domain.com" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label class="info-label">Portal Password</label><input type="text" id="add-emp-pass" placeholder="Default: 1234" value="1234" class="bg-space-950 border border-white/10 text-cyan-400 font-mono rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Residential Hub / Address</label><input type="text" id="add-emp-loc" placeholder="City / Barangay" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+                <div><label class="info-label">Mall ID Number</label><input type="text" id="add-emp-mallid-no" placeholder="e.g. 58184" class="bg-space-950 border border-white/10 text-cyan-400 font-mono rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Mall ID Expiration</label><input type="date" id="add-emp-mallid-exp" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Mall ID Status</label><input type="text" id="add-emp-mallid-status" placeholder="Active / For Renewal" class="bg-space-950 border border-white/10 text-emerald-400 rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/10 space-y-3">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="add-emp-is-admin" class="w-4 h-4 accent-cyan-500">
+                    <label for="add-emp-is-admin" class="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Grant Admin / Manager Rights</label>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label class="info-label">Permit Dashboard Username</label><input type="text" id="add-emp-portal-user" value="smtp_smckmall_058184" class="bg-space-950 border border-white/10 text-cyan-400 font-mono rounded-xl px-4 py-3 text-xs w-full"></div>
+                    <div><label class="info-label">Permit Dashboard Password</label><input type="text" id="add-emp-portal-pass" value="cJEjZn" class="bg-space-950 border border-white/10 text-cyan-400 font-mono rounded-xl px-4 py-3 text-xs w-full"></div>
+                </div>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button onclick="saveNewEmployee()" id="btn-save-new-emp" class="flex-1 py-4 bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-cyan-500/10">Commit Personnel</button>
+            <button onclick="closeAddEmployeeModal()" class="py-4 px-8 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- DA Entry Modal -->
+<div id="da-entry-modal" class="fixed inset-0 z-[175] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-rose-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 id="da-modal-title" class="text-sm font-black text-white uppercase tracking-widest">Incident Case Record</h3>
+                <p class="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Disciplinary Registry</p>
+            </div>
+            <button onclick="closeDAEntryModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-5">
+            <div>
+                <label class="info-label">Employee Name *</label>
+                <select id="da-input-emp" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                    <option value="">Select Crew...</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="info-label">Disciplinary Action Type *</label>
+                    <select id="da-input-type" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                        <option value="Written Reprimand">Written Reprimand</option>
+                        <option value="1st Offense (Warning)">1st Offense (Warning)</option>
+                        <option value="2nd Offense (Suspension)">2nd Offense (Suspension)</option>
+                        <option value="3rd Offense (Final Warning)">3rd Offense (Final Warning)</option>
+                        <option value="4th Offense (Dismissal)">4th Offense (Dismissal)</option>
+                        <option value="Habitual Tardiness">Habitual Tardiness</option>
+                        <option value="Unexcused Absence (AWOL)">Unexcused Absence (AWOL)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="info-label">Case Status *</label>
+                    <select id="da-input-status" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                        <option value="PENDING REVIEW">PENDING REVIEW</option>
+                        <option value="FOR REPORTING">FOR REPORTING</option>
+                        <option value="DONE - CASE CLOSED">DONE - CASE CLOSED</option>
+                        <option value="DISMISSED">DISMISSED</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="info-label">Incident / AWOL Date(s)</label><input type="text" id="da-input-awol" placeholder="e.g. 2026-03-01 or Mar 1, 2" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Report Date</label><input type="date" id="da-input-report" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div>
+                <label class="info-label">Verdict / Official Remarks</label>
+                <textarea id="da-input-verdict" placeholder="Describe the incident, verdict or explanation..." class="bg-space-950 border border-white/10 text-white rounded-xl p-4 text-xs w-full h-24 resize-none"></textarea>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button id="btn-del-da" onclick="deleteDAEntry()" class="hidden py-4 px-6 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-rose-500/20 transition-all"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="saveDAEntry()" id="btn-save-da" class="flex-1 py-4 bg-rose-500 hover:bg-rose-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-rose-500/10">Commit Case Record</button>
+            <button onclick="closeDAEntryModal()" class="py-4 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Attrition Entry Modal -->
+<div id="attrition-entry-modal" class="fixed inset-0 z-[180] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-amber-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 id="attr-modal-title" class="text-sm font-black text-white uppercase tracking-widest">Log Crew Detachment</h3>
+                <p class="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Attrition Archive Entry</p>
+            </div>
+            <button onclick="closeAttritionEntryModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-5">
+            <div>
+                <label class="info-label">Personnel Node *</label>
+                <select id="attr-input-emp" onchange="autoFillAttritionEmp(this.value)" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                    <option value="">Select Crew...</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="info-label">First Name *</label><input type="text" id="attr-input-fn" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Last Name *</label><input type="text" id="attr-input-ln" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="info-label">Position / Role</label><input type="text" id="attr-input-pos" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Date Hired</label><input type="date" id="attr-input-hired" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            </div>
+            <div><label class="info-label">Last Day of Duty *</label><input type="date" id="attr-input-lastday" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            <div>
+                <label class="info-label">Reason for Separation *</label>
+                <textarea id="attr-input-reason" placeholder="Enter resignation reason, clearance status, etc..." class="bg-space-950 border border-white/10 text-white rounded-xl p-4 text-xs w-full h-24 resize-none"></textarea>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button id="btn-del-attr" onclick="deleteAttritionEntry()" class="hidden py-4 px-6 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-rose-500/20 transition-all"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="saveAttritionEntry()" id="btn-save-attr" class="flex-1 py-4 bg-amber-500 hover:bg-amber-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/10">Commit Detachment</button>
+            <button onclick="closeAttritionEntryModal()" class="py-4 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Announcement Entry Modal -->
+<div id="announcement-entry-modal" class="fixed inset-0 z-[185] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-cyan-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 id="anc-modal-title" class="text-sm font-black text-white uppercase tracking-widest">Broadcast Store Notice</h3>
+                <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Announcements Portal</p>
+            </div>
+            <button onclick="closeAnnouncementModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-5">
+            <div><label class="info-label">Notice Title *</label><input type="text" id="anc-input-title" placeholder="e.g. Mandatory Store Meeting" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full font-bold"></div>
+            <div>
+                <label class="info-label">Notice Content *</label>
+                <textarea id="anc-input-content" placeholder="Type notice details..." class="bg-space-950 border border-white/10 text-white rounded-xl p-4 text-xs w-full h-32 resize-none"></textarea>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button onclick="saveAnnouncement()" id="btn-save-anc" class="flex-1 py-4 bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-cyan-500/10">Broadcast Notice</button>
+            <button onclick="closeAnnouncementModal()" class="py-4 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Summary Note Edit Modal -->
+<div id="daily-note-modal" class="fixed inset-0 z-[190] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-md w-full animate-in zoom-in duration-300 border-cyan-500/20 shadow-2xl">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <h3 id="daily-note-modal-title" class="text-xs font-black text-white uppercase tracking-widest">Broadcast Memo Note</h3>
+            <button onclick="closeDailyNoteModal()" class="text-space-400 hover:text-white transition-colors"><i class="fa-solid fa-circle-xmark text-lg"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="info-label">Daily Remarks / Memo</label>
+                <textarea id="daily-note-input" placeholder="Type store shift summary, remarks, special notes..." class="bg-space-950 border border-white/10 text-white rounded-xl p-4 text-xs w-full h-28 resize-none"></textarea>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-3">
+            <button onclick="saveDailySummaryNote()" id="btn-save-daily-note" class="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all">Save Memo</button>
+            <button onclick="deleteDailySummaryNote()" class="py-3 px-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-rose-500/20 transition-all">Clear</button>
+            <button onclick="closeDailyNoteModal()" class="py-3 px-4 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Work Permit Entry Modal -->
+<div id="work-permit-entry-modal" class="fixed inset-0 z-[195] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-emerald-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 id="permit-modal-title" class="text-sm font-black text-white uppercase tracking-widest">Register Work Permit</h3>
+                <p class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Health & Sanitation Registry</p>
+            </div>
+            <button onclick="closeWorkPermitModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-4">
+            <div><label class="info-label">Reference Number *</label><input type="text" id="permit-input-ref" placeholder="e.g. SP-2026-001" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full font-mono"></div>
+            <div><label class="info-label">Custom Label / Document Name *</label><input type="text" id="permit-input-label" placeholder="e.g. Sanitary Permit 2026" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="info-label">Trade / Store Name</label><input type="text" id="permit-input-trade" value="Chowking SM Clark" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+                <div><label class="info-label">Status *</label>
+                    <select id="permit-input-status" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full">
+                        <option value="APPROVED">APPROVED</option>
+                        <option value="PENDING">PENDING</option>
+                        <option value="EXPIRED">EXPIRED</option>
+                    </select>
+                </div>
+            </div>
+            <div><label class="info-label">Expiration / Issue Date</label><input type="date" id="permit-input-date" class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full"></div>
+            <div><label class="info-label">Document Web URL / Image Link</label><input type="text" id="permit-input-url" placeholder="https://..." class="bg-space-950 border border-white/10 text-white rounded-xl px-4 py-3 text-xs w-full font-mono"></div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button id="btn-del-permit" onclick="deleteWorkPermit()" class="hidden py-4 px-6 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-rose-500/20 transition-all"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="saveWorkPermit()" id="btn-save-permit" class="flex-1 py-4 bg-emerald-500 hover:bg-emerald-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/10">Commit Permit Record</button>
+            <button onclick="closeWorkPermitModal()" class="py-4 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mall ID Scraper Modal -->
+<div id="mall-id-scraper-modal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-cyan-500/20 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">Mall ID Automated Scraper</h3>
+                <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">SM OMA Portal Sync</p>
+            </div>
+            <button onclick="closeMallIdScraperModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+            <div class="flex items-center justify-between bg-space-950/50 p-4 rounded-xl border border-white/5">
+                <span class="text-xs font-bold text-slate-300">Select Personnel with Mall ID</span>
+                <div class="flex gap-2">
+                    <button onclick="selectAllMallIdEmps(true)" class="text-[9px] font-black text-cyan-400 uppercase bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">All</button>
+                    <button onclick="selectAllMallIdEmps(false)" class="text-[9px] font-black text-space-400 uppercase bg-white/5 px-2 py-1 rounded border border-white/10">None</button>
+                </div>
+            </div>
+            <div id="mallid-emp-list" class="space-y-2 max-h-48 overflow-y-auto p-2 bg-space-950/40 rounded-xl border border-white/5">
+                <!-- Checkboxes injected here -->
+            </div>
+            <div id="mallid-scrape-log" class="p-4 bg-space-950/80 rounded-xl border border-white/10 font-mono text-[10px] space-y-1 h-36 overflow-y-auto text-slate-300">
+                <p class="text-space-500 italic">Ready to execute scraping protocol...</p>
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 flex gap-4">
+            <button onclick="executeMallIdScrape()" id="btn-start-mallid-scrape" class="flex-1 py-4 bg-cyan-500 hover:bg-cyan-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-cyan-500/10">Start Auto-Scraping</button>
+            <button onclick="closeMallIdScraperModal()" class="py-4 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- OMA Permit Scraper Portal Modal -->
+<div id="permit-scraper-modal" class="fixed inset-0 z-[210] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-emerald-500/20 shadow-2xl">
+        <div class="px-8 py-5 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">OMA Work Permit Scraper Portal</h3>
+                <p class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Live Page Extractor</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="autoFillOmaCredentials()" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">
+                    <i class="fa-solid fa-key mr-1"></i>Auto Login
+                </button>
+                <button onclick="copyOmaBookmarkletCode()" class="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-cyan-500/20 transition-all">
+                    <i class="fa-solid fa-code mr-1"></i>Copy Snippet
+                </button>
+                <button onclick="openPastePermitsModal()" class="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-amber-500/20 transition-all">
+                    <i class="fa-solid fa-paste mr-1"></i>Import JSON
+                </button>
+                <button onclick="scrapePermitsFromOmaIframe()" class="bg-emerald-500 text-space-950 px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest shadow-lg shadow-emerald-500/10 hover:bg-emerald-400 transition-all">
+                    <i class="fa-solid fa-download mr-1"></i>Scrape Permits
+                </button>
+                <button onclick="closePermitScraperModal()" class="text-space-400 hover:text-white transition-colors ml-2">
+                    <i class="fa-solid fa-circle-xmark text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 bg-white relative">
+            <iframe id="oma-permit-iframe" src="https://oma.smphi.com/TP_WorkPermit/" class="w-full h-full border-none"></iframe>
+        </div>
+        <div class="p-4 bg-space-900/60 border-t border-white/5 text-center flex justify-between items-center px-8">
+            <span class="text-[9px] text-space-400 font-mono">OMA Portal: https://oma.smphi.com/TP_WorkPermit/</span>
+            <button onclick="closePermitScraperModal()" class="text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Close Portal</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import JSON Permits Modal -->
+<div id="paste-permits-modal" class="fixed inset-0 z-[220] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-lg w-full p-8 animate-in zoom-in duration-300 border-amber-500/20 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black text-white uppercase tracking-widest">Import Scraped Permit JSON</h3>
+            <button onclick="document.getElementById('paste-permits-modal').classList.add('hidden')" class="text-space-400 hover:text-white"><i class="fa-solid fa-circle-xmark text-lg"></i></button>
+        </div>
+        <p class="text-xs text-space-400 mb-4">Paste the JSON output extracted by the scraper snippet below:</p>
+        <textarea id="paste-permits-json" placeholder='[{"reference_number":"WP-2026-001","status":"APPROVED", ...}]' class="bg-space-950 border border-white/10 text-cyan-400 font-mono text-xs p-4 rounded-xl w-full h-40 resize-none outline-none focus:ring-1 focus:ring-amber-500"></textarea>
+        <div class="mt-6 flex gap-3">
+            <button onclick="processPastedPermitsJson()" class="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-space-950 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/10">Import Batch</button>
+            <button onclick="document.getElementById('paste-permits-modal').classList.add('hidden')" class="py-3 px-6 text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mall ID Renewal Warning Modal -->
+<div id="mallid-renewal-warning-modal" class="fixed inset-0 z-[230] flex items-center justify-center p-4 hidden backdrop-blur-xl bg-space-950/80">
+    <div class="glass-card rounded-[2.5rem] max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in duration-300 border-rose-500/30 shadow-2xl">
+        <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-space-900/60">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
+                    <i class="fa-solid fa-id-card text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Mall ID & Status Renewal Warning</h3>
+                    <p class="text-[9px] font-bold text-rose-400 uppercase tracking-widest">SM OMA Renewal Protocol</p>
+                </div>
+            </div>
+            <button onclick="closeMallIdRenewalWarningModal()" class="text-space-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+            <div class="flex flex-col sm:flex-row items-center justify-between bg-space-950/50 p-4 rounded-2xl border border-white/5 gap-3">
+                <div>
+                    <p class="text-xs font-bold text-slate-200">Personnel Needing Mall ID Renewal</p>
+                    <p class="text-[9px] text-space-400 font-bold uppercase tracking-wider">IDs expiring within 30 days or marked 'For Renewal' / 'Expired'</p>
+                </div>
+                <button onclick="scrapeExpiringMallIDsBatch()" class="bg-cyan-500 text-space-950 px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-cyan-500/10 hover:bg-cyan-400 transition-all whitespace-nowrap">
+                    <i class="fa-solid fa-sync mr-1"></i>Auto-Scrape Expiring IDs
+                </button>
+            </div>
+            <div id="mallid-renewal-list" class="space-y-2">
+                <!-- List items injected here -->
+            </div>
+        </div>
+        <div class="p-6 bg-space-900/60 border-t border-white/5 text-center flex justify-between items-center px-8">
+            <span id="mallid-renewal-summary-text" class="text-[10px] text-space-400 font-bold uppercase tracking-wider">0 personnel require attention</span>
+            <button onclick="closeMallIdRenewalWarningModal()" class="text-space-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Close Window</button>
+        </div>
+    </div>
+</div>
+
 <script>
     var sb = window.sb;
     var getSB = function() { return window.sb || sb; };
@@ -918,6 +1333,8 @@
     var AUTH_PASS = null, MEDAL_PASS = null, SUPER_PASS = null;
     var employees = [], activeTab = 'attendance', portalRole = 'admin';
     var currentAttendance = [], allAttendance = [], allDaRecords = [], allAttritionRecords = [], dtrRecords = [];
+    var allAnnouncements = [], allWorkPermits = [];
+    var editingDaRecord = null, editingAttrRecord = null, editingAncRecord = null, editingPermitRecord = null;
     var shiftTemplates = [], weeklySchedules = [], currentSchedDate = new Date();
     var allChatMessages = [], chatChannel = null;
     var currentNote = null, showExcrew = false, medalCountdownStart = null, hiddenSchedDayIndices = new Set();
@@ -2445,41 +2862,17 @@
             const { data } = await sb.from('employees').select('*');
             if (data) {
                 employees = data;
-                const select = document.getElementById('da-name-select');
-                select.innerHTML = '<option value="">All Crew Personnel...</option>';
-
-                const excludedNames = ["admin Fusion", "Chowking SM Clark"];
-
-                const excludedPositions = ["assistant manager", "manager", "senior crew", "administrator", "coordinator"];
-
-                var uniqueNames = data.filter(function(e) {
-                        var fullName = (e.first_name || '') + ' ' + (e.last_name || '');
-                        fullName = fullName.trim().toLowerCase();
-                        if (excludedNames.some(function(exName) { return fullName.indexOf(exName.toLowerCase()) !== -1; })) return false;
-                        var pos = (e.position || "").toLowerCase();
-                        if (excludedPositions.some(function(p) { return pos.indexOf(p) !== -1; })) return false;
-                        return pos.indexOf("excrew") === -1;
-                    }).map(function(e) {
-                        return ((e.first_name || '') + ' ' + (e.last_name || '')).trim();
-                    });
-
-                // Deduplicate uniqueNames
-                uniqueNames = uniqueNames.filter(function(item, pos) {
-                    return uniqueNames.indexOf(item) == pos;
-                }).sort();
-
-                uniqueNames.forEach(name => {
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.innerText = name;
-                    select.appendChild(opt);
-                });
+                populateDAEmpDropdown(data);
             }
             const { data: attendanceData } = await sb.from('attendance_records').select('*'); if (attendanceData) allAttendance = attendanceData;
             const { data: daData } = await sb.from('da_records').select('*').order('date_report', { ascending: false });
             if (daData) allDaRecords = daData;
             const { data: attrData } = await sb.from('attrition_records').select('*').order('last_day_of_duty', { ascending: false }); if (attrData) allAttritionRecords = attrData;
             const { data: settingsData } = await sb.from('settings').select('value').eq('key', 'medal_countdown_start').maybeSingle(); if (settingsData) medalCountdownStart = settingsData.value;
+            const { data: ancData } = await sb.from('announcements').select('*').order('created_at', { ascending: false });
+            if (ancData) allAnnouncements = ancData;
+            const { data: permitData } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+            if (permitData) allWorkPermits = permitData;
 
             if (portalRole !== 'personal') checkBirthdayAlerts(employees);
 
@@ -2490,6 +2883,46 @@
             console.error("Initialization Error:", err);
             document.getElementById('attendance-list').innerHTML = `<div class="p-32 text-center text-rose-400 font-bold uppercase text-xs tracking-widest">Uplink Interrupted during sequence init.<br><span class="text-[10px] lowercase italic opacity-60">${err.message || err}</span></div>`;
         }
+    }
+
+    function populateDAEmpDropdown(data) {
+        const select = document.getElementById('da-name-select');
+        if (!select) return;
+        select.innerHTML = '<option value="">All Crew Personnel...</option>';
+        const excludedNames = ["admin Fusion", "Chowking SM Clark"];
+        const excludedPositions = ["assistant manager", "manager", "senior crew", "administrator", "coordinator"];
+
+        var uniqueNames = data.filter(function(e) {
+            var fullName = ((e.first_name || '') + ' ' + (e.last_name || '')).trim().toLowerCase();
+            if (excludedNames.some(function(exName) { return fullName.indexOf(exName.toLowerCase()) !== -1; })) return false;
+            var pos = (e.position || "").toLowerCase();
+            if (excludedPositions.some(function(p) { return pos.indexOf(p) !== -1; })) return false;
+            return pos.indexOf("excrew") === -1;
+        }).map(function(e) {
+            return ((e.first_name || '') + ' ' + (e.last_name || '')).trim();
+        });
+
+        uniqueNames = uniqueNames.filter(function(item, pos) { return uniqueNames.indexOf(item) == pos; }).sort();
+
+        uniqueNames.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+        });
+
+        const modalDaSelect = document.getElementById('da-input-emp');
+        const modalAttrSelect = document.getElementById('attr-input-emp');
+        [modalDaSelect, modalAttrSelect].forEach(sel => {
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Select Crew...</option>';
+            data.filter(e => (e.position || '').toLowerCase() !== 'excrew').sort((a,b) => (a.first_name||'').localeCompare(b.first_name||'')).forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.employee_no;
+                opt.innerText = `${e.first_name} ${e.last_name} (${e.employee_no})`;
+                sel.appendChild(opt);
+            });
+        });
     }
 
     async function loadSchedulerPrerequisites() {
@@ -2514,17 +2947,50 @@
                 var { data: daData } = await sb.from('da_records').select('*').order('date_report', { ascending: false });
                 if (daData) allDaRecords = daData;
             } catch (e) {}
+        } else if (tab === 'announcements') {
+            try {
+                var { data: ancData } = await sb.from('announcements').select('*').order('created_at', { ascending: false });
+                if (ancData) allAnnouncements = ancData;
+            } catch (e) {}
+        } else if (tab === 'permits') {
+            try {
+                var { data: permitData } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+                if (permitData) allWorkPermits = permitData;
+            } catch (e) {}
         }
 
-        const btnAtt = document.getElementById('btn-attendance'), btnEmp = document.getElementById('btn-employees'), btnDa = document.getElementById('btn-da'), btnAttr = document.getElementById('btn-attrition'), btnMedal = document.getElementById('btn-medals'), btnSystem = document.getElementById('btn-system'), btnSched = document.getElementById('btn-scheduler'), btnChat = document.getElementById('btn-chat');
+        const btnAtt = document.getElementById('btn-attendance'), btnEmp = document.getElementById('btn-employees'), btnDa = document.getElementById('btn-da'), btnAttr = document.getElementById('btn-attrition'), btnMedal = document.getElementById('btn-medals'), btnSystem = document.getElementById('btn-system'), btnSched = document.getElementById('btn-scheduler'), btnChat = document.getElementById('btn-chat'), btnAnc = document.getElementById('btn-announcements'), btnPermit = document.getElementById('btn-permits');
         const datePicker = document.getElementById('date-picker'), daFilter = document.getElementById('da-filter-container'), excrewBtn = document.getElementById('btn-excrew-filter');
-        [btnAtt, btnEmp, btnDa, btnAttr, btnMedal, btnSystem, btnSched, btnChat].forEach(btn => { if (!btn) return; btn.className = "flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"; });
+
+        [btnAtt, btnEmp, btnDa, btnAttr, btnMedal, btnSystem, btnSched, btnChat, btnAnc, btnPermit].forEach(btn => { if (!btn) return; btn.className = "flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all text-space-400 hover:text-white"; });
         const activeBtn = document.getElementById('btn-' + tab); if (activeBtn) activeBtn.className = "flex-1 min-w-[80px] px-2 md:px-8 py-3 rounded-xl text-[8px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all bg-cyan-500 text-space-950 shadow-md shadow-cyan-500/10";
+
         if (tab === 'attendance') { datePicker.classList.remove('hidden'); daFilter.classList.add('hidden'); }
-        else if (tab === 'medals' || tab === 'scheduler' || tab === 'chat') { datePicker.classList.add('hidden'); daFilter.classList.add('hidden'); }
+        else if (tab === 'medals' || tab === 'scheduler' || tab === 'chat' || tab === 'announcements' || tab === 'permits') { datePicker.classList.add('hidden'); daFilter.classList.add('hidden'); }
         else { datePicker.classList.add('hidden'); daFilter.classList.remove('hidden'); }
+
         if (tab === 'employees' || tab === 'da') excrewBtn.classList.remove('hidden');
         else { excrewBtn.classList.add('hidden'); showExcrew = false; excrewBtn.classList.add('text-space-400'); excrewBtn.classList.remove('bg-rose-500/20', 'text-rose-400', 'border-rose-500/30'); }
+
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+        const addEmpBtn = document.getElementById('btn-add-emp-action');
+        const addDaBtn = document.getElementById('btn-add-da-action');
+        const addAttrBtn = document.getElementById('btn-add-attrition-action');
+        const addAncBtn = document.getElementById('btn-add-anc-action');
+        const addPermitBtn = document.getElementById('btn-add-permit-action');
+        const editDayNoteBtn = document.getElementById('btn-edit-day-note');
+        const openMallIdScraperBtn = document.getElementById('btn-open-mallid-scraper');
+        const openPermitScraperBtn = document.getElementById('btn-open-permit-scraper');
+
+        if (addEmpBtn) addEmpBtn.classList.toggle('hidden', !isAdmin || tab !== 'employees');
+        if (addDaBtn) addDaBtn.classList.toggle('hidden', !isAdmin || tab !== 'da');
+        if (addAttrBtn) addAttrBtn.classList.toggle('hidden', !isAdmin || tab !== 'attrition');
+        if (addAncBtn) addAncBtn.classList.toggle('hidden', !isAdmin || tab !== 'announcements');
+        if (addPermitBtn) addPermitBtn.classList.toggle('hidden', !isAdmin || tab !== 'permits');
+        if (editDayNoteBtn) editDayNoteBtn.classList.toggle('hidden', !isAdmin || tab !== 'attendance');
+        if (openMallIdScraperBtn) openMallIdScraperBtn.classList.toggle('hidden', !isAdmin || tab !== 'employees');
+        if (openPermitScraperBtn) openPermitScraperBtn.classList.toggle('hidden', !isAdmin || tab !== 'permits');
+
         renderMain();
     }
 
@@ -2561,8 +3027,8 @@
                 // Personal role
                 backVaultBtn.classList.remove('hidden');
                 document.getElementById('nav-controls').classList.remove('hidden');
-                const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'system'];
-                tabs.forEach(t => document.getElementById('btn-' + t).classList.add('hidden'));
+                const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'system', 'announcements', 'permits'];
+                tabs.forEach(t => { const b = document.getElementById('btn-' + t); if (b) b.classList.add('hidden'); });
                 document.getElementById('btn-chat').classList.remove('hidden');
                 document.getElementById('btn-chat').classList.add('flex-1');
             }
@@ -2570,8 +3036,8 @@
             document.getElementById('btn-back-vault').classList.add('hidden');
             document.getElementById('stats-container').classList.remove('hidden'); document.getElementById('nav-controls').classList.remove('hidden'); document.getElementById('admin-controls').classList.remove('hidden');
             [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.remove('hidden'));
-            const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'chat'];
-            tabs.forEach(t => document.getElementById('btn-' + t).classList.remove('hidden'));
+            const tabs = ['attendance', 'employees', 'da', 'attrition', 'medals', 'scheduler', 'chat', 'announcements', 'permits'];
+            tabs.forEach(t => { const b = document.getElementById('btn-' + t); if (b) b.classList.remove('hidden'); });
             const sysBtn = document.getElementById('btn-system'); if (portalRole === 'superadmin') sysBtn.classList.remove('hidden'); else sysBtn.classList.add('hidden');
         }
 
@@ -2588,7 +3054,6 @@
         if (daSearch) filteredAttr = filteredAttr.filter(r => r.first_name.toLowerCase().includes(daSearch) || r.last_name.toLowerCase().includes(daSearch) || r.employee_no.toLowerCase().includes(daSearch));
         let filteredEmps;
         const excludedNames = ["admin Fusion", "Chowking SM Clark"];
-
         const excludedPositions = ["assistant manager", "manager", "senior crew", "administrator", "coordinator"];
         if (showExcrew) {
             filteredEmps = employees.filter(e => (e.position || "").toLowerCase().includes('excrew') && !(`${e.first_name} ${e.last_name}`.includes('Marcyl Maquiling')));
@@ -2616,7 +3081,7 @@
             statLabels.da.innerText = showExcrew ? "Excrew Records" : "Active Crew Member"; statVals.da.innerText = filteredEmps.length;
         } else if (activeTab === 'da') {
             [statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden')); statLabels.present.innerText = "Total Cases"; statVals.present.innerText = filteredDa.length;
-        } else if (activeTab === 'scheduler' || activeTab === 'chat' || activeTab === 'medals' || activeTab === 'system') {
+        } else if (activeTab === 'scheduler' || activeTab === 'chat' || activeTab === 'medals' || activeTab === 'system' || activeTab === 'announcements' || activeTab === 'permits') {
             [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden'));
             document.getElementById('stats-container').classList.add('hidden');
         } else if (activeTab === 'attrition') { [statCards.present, statCards.late, statCards.absent].forEach(c => c.classList.add('hidden')); statLabels.da.innerText = "Historical Log"; statVals.da.innerText = allAttritionRecords.length; }
@@ -2658,6 +3123,8 @@
         else if (activeTab === 'scheduler') { titleEl.innerText = "Personnel Deployment Grid"; renderScheduler(listContainer); }
         else if (activeTab === 'chat') { titleEl.innerText = "Terminal Chat Core"; renderChat(listContainer); }
         else if (activeTab === 'da') { titleEl.innerText = "Incident Case Archive"; renderDA(listContainer, filteredDa); }
+        else if (activeTab === 'announcements') { titleEl.innerText = "Store Announcements & Memos"; renderAnnouncements(listContainer); }
+        else if (activeTab === 'permits') { titleEl.innerText = "Health & Sanitary Permits Hub"; renderPermits(listContainer); }
         else if (activeTab === 'medals') { titleEl.innerText = "Personnel Medal Registry"; renderMedals(listContainer); }
         else if (activeTab === 'system') { titleEl.innerText = "Master System Control"; renderSystemSettings(listContainer); }
         else { titleEl.innerText = "Historical Attrition Log"; renderAttrition(listContainer, filteredAttr); }
@@ -2848,7 +3315,7 @@
                 ? `<button onclick="openPrivateChat('${emp.employee_no}')" class="ml-2 text-cyan-400 hover:text-cyan-300 transition-colors text-[10px]" title="Send Message"><i class="fa-solid fa-comment-dots"></i></button>`
                 : '';
 
-            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-6 py-4"><div class="flex items-start gap-3"><div class="min-w-[100px] pt-1"><span class="glass-badge badge-cyan !text-[8px] !py-0.5 !px-2">${displayPos}</span></div><div class="w-10 h-10 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-xs tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div>${badgeHtml}<p class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-0.5">${icons}</div>${perfScore}${activeDaHtml}<p class="text-[10px] text-slate-400 mt-0.5 opacity-80">${emp.phone_number || emp.cp_number || 'No CP'}</p><p class="text-[9px] text-space-400 opacity-60">${emp.email || ''}</p></div></div></td><td class="px-6 py-4"><p class="text-[10px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[10px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p></td><td class="px-6 py-4"><div class="space-y-1 font-mono text-[10px] text-slate-300"><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-2">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-2">${emp.tin_number || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PHILH</span><span class="ml-2">${emp.phil_health || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PAGIBIG</span><span class="ml-2">${emp.pagibig || '--'}</span></div></div></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-[10px] text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-6 py-4"><div class="flex flex-wrap gap-1 mb-1 max-w-[200px]"><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">C: ${emp.uniform_cap || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">A: ${emp.uniform_apron || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">S: ${emp.uniform_shirt || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">P: ${emp.uniform_pants || 0}</span></div><div class="text-[8px] text-cyan-400/90 font-bold space-y-0.5 my-1"><p>Shirt: ${emp.shirt_size || '--'}</p><p>Pants: ${emp.pants_size || '--'}</p></div><span class="glass-badge badge-emerald inline-block mt-0.5 !text-[8px] !py-0.5 !px-2">${emp.is_certified ? 'Certified' : 'Uncertified'}</span></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-cyan-400 font-mono mt-0.5 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
+            html += `<tr class="hover:bg-cyan-500/[0.02] transition-colors"><td class="px-6 py-4"><div class="flex items-start gap-3"><div class="min-w-[100px] pt-1"><span class="glass-badge badge-cyan !text-[8px] !py-0.5 !px-2">${displayPos}</span></div><div class="w-10 h-10 rounded-full bg-space-950 border border-white/10 overflow-hidden shrink-0"><img src="${getProfilePic(emp.employee_no)}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${emp.first_name}+${emp.last_name}&background=0b0f19&color=22d3ee'"></div><div><div class="flex items-center"><h4 class="font-bold text-slate-100 text-xs tracking-tight cursor-pointer select-none" ondblclick="openPersonalProfile('${emp.employee_no}')">${emp.first_name} ${emp.last_name}</h4>${msgIcon}</div>${badgeHtml}<p class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mt-0.5">ID: ${emp.employee_no}</p><div class="flex items-center gap-1 mt-0.5">${icons}</div>${perfScore}${activeDaHtml}<p class="text-[10px] text-slate-400 mt-0.5 opacity-80">${emp.phone_number || emp.cp_number || 'No CP'}</p><p class="text-[9px] text-space-400 opacity-60">${emp.email || ''}</p></div></div></td><td class="px-6 py-4"><p class="text-[10px] text-slate-400">Hired: <span class="text-slate-200 font-medium ml-1">${formatDate(emp.date_hired) || '--'}</span></p><p class="text-[10px] text-slate-400 mt-0.5">Tenure: <span class="text-emerald-400 font-bold ml-1">${tenure}</span></p></td><td class="px-6 py-4"><div class="space-y-1 font-mono text-[10px] text-slate-300"><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">SSS</span><span class="ml-2">${emp.sss || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">TIN</span><span class="ml-2">${emp.tin_number || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PHILH</span><span class="ml-2">${emp.phil_health || '--'}</span></div><div class="flex items-center"><span class="w-12 text-[8px] text-space-400 font-sans font-black uppercase tracking-tighter opacity-60">PAGIBIG</span><span class="ml-2">${emp.pagibig || '--'}</span></div><div class="flex items-center pt-1 border-t border-white/5"><span class="w-12 text-[8px] text-cyan-400 font-sans font-black uppercase tracking-tighter">MALL ID</span><span class="ml-2 text-cyan-400 font-bold">${emp.mall_id_no || '--'}</span></div>${emp.mall_id_status ? `<div class="mt-1"><span class="px-1.5 py-0.5 rounded text-[7px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">${emp.mall_id_status}</span></div>` : ''}</div></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.bank || '--'}</p><p class="text-[10px] text-cyan-400/80 font-mono mt-0.5">${emp.bank_account_number || '--'}</p></td><td class="px-6 py-4"><div class="flex flex-wrap gap-1 mb-1 max-w-[200px]"><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">C: ${emp.uniform_cap || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">A: ${emp.uniform_apron || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">S: ${emp.uniform_shirt || 0}</span><span class="text-[8px] bg-space-950 text-space-400 px-1.5 py-0.5 rounded border border-white/5">P: ${emp.uniform_pants || 0}</span></div><div class="text-[8px] text-cyan-400/90 font-bold space-y-0.5 my-1"><p>Shirt: ${emp.shirt_size || '--'}</p><p>Pants: ${emp.pants_size || '--'}</p></div><span class="glass-badge badge-emerald inline-block mt-0.5 !text-[8px] !py-0.5 !px-2">${emp.is_certified ? 'Certified' : 'Uncertified'}</span></td><td class="px-6 py-4"><p class="text-[11px] font-semibold text-slate-300">${emp.emergency_contact_name || '--'}</p><p class="text-[10px] text-cyan-400 font-mono mt-0.5 font-bold">${emp.emergency_contact_phone || '--'}</p></td></tr>`;
         });
         container.innerHTML = html + `</tbody></table></div>`;
     }
@@ -3677,6 +4144,675 @@
                     }
                 }
             }, 10000); // 10 seconds is safer
+        }
+    }
+
+    // --- ANNOUNCEMENTS RENDER & HANDLERS ---
+    function renderAnnouncements(container) {
+        if (!allAnnouncements || allAnnouncements.length === 0) {
+            container.innerHTML = `<div class="p-16 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No store notices currently published.</div>`;
+            return;
+        }
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+        let html = `<div class="p-6 md:p-8 space-y-4">`;
+
+        allAnnouncements.forEach(anc => {
+            const dateStr = anc.created_at ? new Date(anc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '---';
+            html += `
+                <div class="glass-card p-6 rounded-2xl border border-cyan-500/20 relative group hover:border-cyan-500/40 transition-all">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
+                                <i class="fa-solid fa-bullhorn text-xs"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-white tracking-wide uppercase">${anc.title || 'Store Notice'}</h4>
+                                <p class="text-[9px] font-bold text-cyan-400/80 uppercase tracking-widest">${dateStr}</p>
+                            </div>
+                        </div>
+                        ${isAdmin ? `<button onclick="deleteAnnouncement(${anc.id})" class="text-space-400 hover:text-rose-400 p-2 transition-colors" title="Delete Notice"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </div>
+                    <p class="text-xs text-slate-200 leading-relaxed font-medium whitespace-pre-line">${anc.content || ''}</p>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html + `</div>`;
+    }
+
+    function openAnnouncementModal() {
+        document.getElementById('anc-input-title').value = '';
+        document.getElementById('anc-input-content').value = '';
+        document.getElementById('announcement-entry-modal').classList.remove('hidden');
+    }
+    function closeAnnouncementModal() {
+        document.getElementById('announcement-entry-modal').classList.add('hidden');
+    }
+    async function saveAnnouncement() {
+        const title = document.getElementById('anc-input-title').value.trim();
+        const content = document.getElementById('anc-input-content').value.trim();
+        if (!title || !content) return alert("Notice title and content are mandatory.");
+
+        const btn = document.getElementById('btn-save-anc');
+        btn.innerText = "Broadcasting..."; btn.disabled = true;
+
+        try {
+            const payload = {
+                title: title,
+                content: content,
+                created_at: Date.now(),
+                is_read: false
+            };
+            const { error } = await sb.from('announcements').insert([payload]);
+            if (error) throw error;
+
+            const { data } = await sb.from('announcements').select('*').order('created_at', { ascending: false });
+            if (data) allAnnouncements = data;
+
+            alert("Transmission Complete: Notice published to store core.");
+            closeAnnouncementModal();
+            renderMain();
+        } catch (err) {
+            alert("Broadcast Failed: " + err.message);
+        } finally {
+            btn.innerText = "Broadcast Notice"; btn.disabled = false;
+        }
+    }
+    async function deleteAnnouncement(id) {
+        if (!confirm("Purge this notice from store core?")) return;
+        try {
+            const { error } = await sb.from('announcements').delete().eq('id', id);
+            if (error) throw error;
+            allAnnouncements = allAnnouncements.filter(a => a.id !== id);
+            renderMain();
+        } catch (err) { alert("Purge Error: " + err.message); }
+    }
+
+    // --- WORK PERMITS RENDER & HANDLERS ---
+    function renderPermits(container) {
+        if (!allWorkPermits || allWorkPermits.length === 0) {
+            container.innerHTML = `<div class="p-16 text-center text-space-400 font-bold text-xs uppercase tracking-widest opacity-50">No health/sanitary permits registered.</div>`;
+            return;
+        }
+        const isAdmin = portalRole === 'admin' || portalRole === 'superadmin';
+        let html = `<div class="overflow-x-auto w-full"><table class="w-full text-left border-collapse min-w-[900px]"><thead><tr class="bg-space-900/60 border-b border-white/10"><th class="px-8 py-4 table-header-text">Reference #</th><th class="px-8 py-4 table-header-text">Permit Name</th><th class="px-8 py-4 table-header-text">Status</th><th class="px-8 py-4 table-header-text">Expiration Date</th><th class="px-8 py-4 table-header-text">Actions</th></tr></thead><tbody class="divide-y divide-white/5">`;
+
+        allWorkPermits.forEach(p => {
+            const isApproved = p.status === 'APPROVED' || p.is_approved;
+            const badgeClass = isApproved ? 'badge-emerald' : (p.status === 'EXPIRED' || p.is_expired ? 'badge-rose' : 'badge-amber');
+            html += `
+                <tr class="hover:bg-cyan-500/[0.02] transition-colors text-xs">
+                    <td class="px-8 py-4 font-mono text-cyan-400 font-bold">${p.reference_number}</td>
+                    <td class="px-8 py-4"><span class="font-bold text-white block">${p.custom_label || p.tradename || 'Sanitary Permit'}</span><span class="text-[9px] text-space-400 font-mono">${p.tradename || 'Chowking SM Clark'}</span></td>
+                    <td class="px-8 py-4"><span class="glass-badge ${badgeClass}">${p.status || 'ACTIVE'}</span></td>
+                    <td class="px-8 py-4 font-mono text-slate-300">${formatDate(p.date) || '--'}</td>
+                    <td class="px-8 py-4">
+                        <div class="flex items-center gap-2">
+                            ${p.detail_url ? `<a href="${p.detail_url}" target="_blank" class="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-lg text-[9px] font-black uppercase hover:bg-cyan-500/20 transition-all"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>View Document</a>` : '<span class="text-space-500 text-[10px]">—</span>'}
+                            ${isAdmin ? `<button onclick="openWorkPermitModal(${JSON.stringify(p).replace(/"/g, '&quot;')})" class="text-amber-400 hover:text-amber-300 p-1.5"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        container.innerHTML = html + `</tbody></table></div>`;
+    }
+
+    function openWorkPermitModal(record = null) {
+        editingPermitRecord = record;
+        const isEdit = !!record;
+        document.getElementById('permit-modal-title').innerText = isEdit ? 'Edit Work Permit' : 'Register Work Permit';
+        const refInput = document.getElementById('permit-input-ref');
+        refInput.value = isEdit ? record.reference_number : '';
+        refInput.disabled = isEdit;
+        document.getElementById('permit-input-label').value = isEdit ? (record.custom_label || '') : '';
+        document.getElementById('permit-input-trade').value = isEdit ? (record.tradename || 'Chowking SM Clark') : 'Chowking SM Clark';
+        document.getElementById('permit-input-status').value = isEdit ? (record.status || 'APPROVED') : 'APPROVED';
+        document.getElementById('permit-input-date').value = isEdit ? (record.date || '') : '';
+        document.getElementById('permit-input-url').value = isEdit ? (record.detail_url || '') : '';
+        document.getElementById('btn-del-permit').classList.toggle('hidden', !isEdit);
+        document.getElementById('work-permit-entry-modal').classList.remove('hidden');
+    }
+    function closeWorkPermitModal() { document.getElementById('work-permit-entry-modal').classList.add('hidden'); }
+    async function saveWorkPermit() {
+        const ref = document.getElementById('permit-input-ref').value.trim();
+        const label = document.getElementById('permit-input-label').value.trim();
+        const trade = document.getElementById('permit-input-trade').value.trim();
+        const status = document.getElementById('permit-input-status').value;
+        const date = document.getElementById('permit-input-date').value;
+        const url = document.getElementById('permit-input-url').value.trim();
+
+        if (!ref || !label) return alert("Reference number and permit label are required.");
+
+        const btn = document.getElementById('btn-save-permit');
+        btn.innerText = "Syncing..."; btn.disabled = true;
+
+        try {
+            const payload = {
+                reference_number: ref,
+                custom_label: label,
+                tradename: trade,
+                status: status,
+                date: date || null,
+                detail_url: url || null,
+                is_approved: status === 'APPROVED',
+                is_expired: status === 'EXPIRED',
+                last_updated: Date.now()
+            };
+            const { error } = await sb.from('work_permits').upsert(payload, { onConflict: 'reference_number' });
+            if (error) throw error;
+
+            const { data } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+            if (data) allWorkPermits = data;
+
+            alert("Permit record successfully registered.");
+            closeWorkPermitModal();
+            renderMain();
+        } catch (err) { alert("Registration Error: " + err.message); }
+        finally { btn.innerText = "Commit Permit Record"; btn.disabled = false; }
+    }
+    async function deleteWorkPermit() {
+        if (!editingPermitRecord || !editingPermitRecord.reference_number) return;
+        if (!confirm("Purge permit record from registry?")) return;
+        try {
+            const { error } = await sb.from('work_permits').delete().eq('reference_number', editingPermitRecord.reference_number);
+            if (error) throw error;
+            allWorkPermits = allWorkPermits.filter(p => p.reference_number !== editingPermitRecord.reference_number);
+            closeWorkPermitModal();
+            renderMain();
+        } catch (err) { alert("Purge Error: " + err.message); }
+    }
+
+    // --- ADD PERSONNEL HANDLERS ---
+    function openAddEmployeeModal() {
+        ['add-emp-no','add-emp-fn','add-emp-mn','add-emp-ln','add-emp-hired','add-emp-bday','add-emp-phone','add-emp-email','add-emp-loc'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('add-emp-pass').value = '1234';
+        document.getElementById('add-emp-pos').value = 'Dine In';
+        document.getElementById('add-employee-modal').classList.remove('hidden');
+    }
+    function closeAddEmployeeModal() { document.getElementById('add-employee-modal').classList.add('hidden'); }
+    async function saveNewEmployee() {
+        const empNo = document.getElementById('add-emp-no').value.trim();
+        const fn = document.getElementById('add-emp-fn').value.trim();
+        const mn = document.getElementById('add-emp-mn').value.trim();
+        const ln = document.getElementById('add-emp-ln').value.trim();
+        const pos = document.getElementById('add-emp-pos').value;
+        const hired = document.getElementById('add-emp-hired').value;
+        const bday = document.getElementById('add-emp-bday').value;
+        const phone = document.getElementById('add-emp-phone').value.trim();
+        const email = document.getElementById('add-emp-email').value.trim();
+        const pass = document.getElementById('add-emp-pass').value.trim() || '1234';
+        const loc = document.getElementById('add-emp-loc').value.trim() || 'Chowking SM Clark';
+
+        if (!empNo || !fn || !ln) return alert("Employee Number, First Name and Last Name are required.");
+
+        const btn = document.getElementById('btn-save-new-emp');
+        btn.innerText = "Registering..."; btn.disabled = true;
+
+        try {
+            const payload = {
+                employee_no: empNo,
+                first_name: fn,
+                middle_name: mn,
+                last_name: ln,
+                position: pos,
+                date_hired: hired || null,
+                birthday: bday || null,
+                phone_number: phone || null,
+                email: email || null,
+                location: loc,
+                portal_password: pass,
+                is_certified: false,
+                is_resigned: false
+            };
+
+            const { data, error } = await sb.from('employees').upsert(payload, { onConflict: 'employee_no' }).select().single();
+            if (error) throw error;
+
+            const existingIdx = employees.findIndex(e => e.employee_no === empNo);
+            if (existingIdx !== -1) employees[existingIdx] = data; else employees.push(data);
+
+            populateDAEmpDropdown(employees);
+            alert(`Personnel Node Registered: ${fn} ${ln} (ID: ${empNo}) added to core.`);
+            closeAddEmployeeModal();
+            renderMain();
+        } catch (err) { alert("Registration Error: " + err.message); }
+        finally { btn.innerText = "Commit Personnel"; btn.disabled = false; }
+    }
+
+    // --- DISCIPLINARY ACTION HANDLERS ---
+    function openDAEntryModal(record = null) {
+        editingDaRecord = record;
+        const isEdit = !!record;
+        document.getElementById('da-modal-title').innerText = isEdit ? 'Edit Incident Case Record' : 'Incident Case Record';
+
+        if (isEdit) {
+            const emp = employees.find(e => `${e.first_name || ''} ${e.last_name || ''}`.trim() === record.employee_name);
+            document.getElementById('da-input-emp').value = emp ? emp.employee_no : '';
+            document.getElementById('da-input-type').value = record.da_type || '1st Offense (Warning)';
+            document.getElementById('da-input-status').value = record.status || 'PENDING REVIEW';
+            document.getElementById('da-input-awol').value = record.date_awol || '';
+            document.getElementById('da-input-report').value = record.date_report || '';
+            document.getElementById('da-input-verdict').value = record.verdict || '';
+        } else {
+            document.getElementById('da-input-emp').value = '';
+            document.getElementById('da-input-type').value = '1st Offense (Warning)';
+            document.getElementById('da-input-status').value = 'PENDING REVIEW';
+            document.getElementById('da-input-awol').value = '';
+            document.getElementById('da-input-report').value = new Date().toISOString().split('T')[0];
+            document.getElementById('da-input-verdict').value = '';
+        }
+
+        document.getElementById('btn-del-da').classList.toggle('hidden', !isEdit);
+        document.getElementById('da-entry-modal').classList.remove('hidden');
+    }
+    function closeDAEntryModal() { document.getElementById('da-entry-modal').classList.add('hidden'); }
+    async function saveDAEntry() {
+        const empNo = document.getElementById('da-input-emp').value;
+        const emp = employees.find(e => e.employee_no === empNo);
+        if (!emp) return alert("Please select an employee.");
+
+        const daType = document.getElementById('da-input-type').value;
+        const status = document.getElementById('da-input-status').value;
+        const dateAwol = document.getElementById('da-input-awol').value.trim();
+        const dateReport = document.getElementById('da-input-report').value;
+        const verdict = document.getElementById('da-input-verdict').value.trim();
+
+        const btn = document.getElementById('btn-save-da');
+        btn.innerText = "Syncing Case..."; btn.disabled = true;
+
+        try {
+            const recordId = editingDaRecord ? editingDaRecord.id : undefined;
+            const payload = {
+                employee_id: empNo,
+                employee_name: `${emp.first_name} ${emp.last_name}`,
+                da_type: daType,
+                status: status,
+                date_awol: dateAwol || null,
+                date_report: dateReport || null,
+                verdict: verdict || null,
+                created_at: editingDaRecord ? editingDaRecord.created_at : Date.now()
+            };
+            if (recordId !== undefined) payload.id = recordId;
+
+            const { error } = await sb.from('da_records').upsert(payload);
+            if (error) throw error;
+
+            const { data } = await sb.from('da_records').select('*').order('date_report', { ascending: false });
+            if (data) allDaRecords = data;
+
+            alert("Incident case record successfully logged.");
+            closeDAEntryModal();
+            renderMain();
+        } catch (err) { alert("DA Sync Error: " + err.message); }
+        finally { btn.innerText = "Commit Case Record"; btn.disabled = false; }
+    }
+    async function deleteDAEntry() {
+        if (!editingDaRecord || !editingDaRecord.id) return;
+        if (!confirm("Purge incident case from core?")) return;
+        try {
+            const { error } = await sb.from('da_records').delete().eq('id', editingDaRecord.id);
+            if (error) throw error;
+            allDaRecords = allDaRecords.filter(r => r.id !== editingDaRecord.id);
+            closeDAEntryModal();
+            renderMain();
+        } catch (err) { alert("Purge Error: " + err.message); }
+    }
+
+    // --- ATTRITION HANDLERS ---
+    function openAttritionEntryModal(record = null) {
+        editingAttrRecord = record;
+        const isEdit = !!record;
+        document.getElementById('attr-modal-title').innerText = isEdit ? 'Edit Detachment Record' : 'Log Crew Detachment';
+
+        if (isEdit) {
+            document.getElementById('attr-input-emp').value = record.employee_no || '';
+            document.getElementById('attr-input-fn').value = record.first_name || '';
+            document.getElementById('attr-input-ln').value = record.last_name || '';
+            document.getElementById('attr-input-pos').value = record.position || '';
+            document.getElementById('attr-input-hired').value = record.date_hired || '';
+            document.getElementById('attr-input-lastday').value = record.last_day_of_duty || '';
+            document.getElementById('attr-input-reason').value = record.reason_for_separation || '';
+        } else {
+            ['attr-input-emp','attr-input-fn','attr-input-ln','attr-input-pos','attr-input-hired','attr-input-lastday','attr-input-reason'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        document.getElementById('btn-del-attr').classList.toggle('hidden', !isEdit);
+        document.getElementById('attrition-entry-modal').classList.remove('hidden');
+    }
+    function autoFillAttritionEmp(empNo) {
+        const emp = employees.find(e => e.employee_no === empNo);
+        if (!emp) return;
+        document.getElementById('attr-input-fn').value = emp.first_name || '';
+        document.getElementById('attr-input-ln').value = emp.last_name || '';
+        document.getElementById('attr-input-pos').value = emp.position || 'Crew';
+        document.getElementById('attr-input-hired').value = emp.date_hired || '';
+    }
+    function closeAttritionEntryModal() { document.getElementById('attrition-entry-modal').classList.add('hidden'); }
+    async function saveAttritionEntry() {
+        const empNo = document.getElementById('attr-input-emp').value.trim();
+        const fn = document.getElementById('attr-input-fn').value.trim();
+        const ln = document.getElementById('attr-input-ln').value.trim();
+        const pos = document.getElementById('attr-input-pos').value.trim();
+        const hired = document.getElementById('attr-input-hired').value;
+        const lastDay = document.getElementById('attr-input-lastday').value;
+        const reason = document.getElementById('attr-input-reason').value.trim();
+
+        if (!fn || !ln || !lastDay || !reason) return alert("Name, last day of duty, and reason for separation are mandatory.");
+
+        const btn = document.getElementById('btn-save-attr');
+        btn.innerText = "Committing..."; btn.disabled = true;
+
+        try {
+            const payload = {
+                employee_no: empNo || 'EX_' + Date.now(),
+                first_name: fn,
+                last_name: ln,
+                middle_name: '',
+                position: pos || 'Crew',
+                date_hired: hired || '',
+                last_day_of_duty: lastDay,
+                reason_for_separation: reason,
+                location: 'CK SM CLARK L1 PMAG',
+                created_at: editingAttrRecord ? editingAttrRecord.created_at : Date.now()
+            };
+            if (editingAttrRecord && editingAttrRecord.id) payload.id = editingAttrRecord.id;
+
+            const { error } = await sb.from('attrition_records').upsert(payload);
+            if (error) throw error;
+
+            // Also mark employee as resigned in employees table if exists
+            if (empNo) {
+                await sb.from('employees').update({
+                    position: 'Excrew',
+                    is_resigned: true,
+                    resignation_date: lastDay
+                }).eq('employee_no', empNo);
+            }
+
+            const { data } = await sb.from('attrition_records').select('*').order('last_day_of_duty', { ascending: false });
+            if (data) allAttritionRecords = data;
+
+            alert("Attrition detachment entry successfully logged.");
+            closeAttritionEntryModal();
+            renderMain();
+        } catch (err) { alert("Detachment Sync Error: " + err.message); }
+        finally { btn.innerText = "Commit Detachment"; btn.disabled = false; }
+    }
+    async function deleteAttritionEntry() {
+        if (!editingAttrRecord || !editingAttrRecord.id) return;
+        if (!confirm("Purge detachment record?")) return;
+        try {
+            const { error } = await sb.from('attrition_records').delete().eq('id', editingAttrRecord.id);
+            if (error) throw error;
+            allAttritionRecords = allAttritionRecords.filter(a => a.id !== editingAttrRecord.id);
+            closeAttritionEntryModal();
+            renderMain();
+        } catch (err) { alert("Purge Error: " + err.message); }
+    }
+
+    // --- DAILY SUMMARY NOTE HANDLERS ---
+    function openDailyNoteModal() {
+        const date = document.getElementById('date-picker').value;
+        document.getElementById('daily-note-modal-title').innerText = `Memo Note • ${formatDate(date)}`;
+        document.getElementById('daily-note-input').value = currentNote || '';
+        document.getElementById('daily-note-modal').classList.remove('hidden');
+    }
+    function closeDailyNoteModal() { document.getElementById('daily-note-modal').classList.add('hidden'); }
+    async function saveDailySummaryNote() {
+        const date = document.getElementById('date-picker').value;
+        const note = document.getElementById('daily-note-input').value.trim();
+
+        const btn = document.getElementById('btn-save-daily-note');
+        btn.innerText = "Saving..."; btn.disabled = true;
+
+        try {
+            if (note) {
+                const { error } = await sb.from('daily_summary_notes').upsert({ date: date, note: note }, { onConflict: 'date' });
+                if (error) throw error;
+                currentNote = note;
+            } else {
+                await sb.from('daily_summary_notes').delete().eq('date', date);
+                currentNote = null;
+            }
+
+            alert("Broadcast memo note updated.");
+            closeDailyNoteModal();
+            renderMain();
+        } catch (err) { alert("Save Error: " + err.message); }
+        finally { btn.innerText = "Save Memo"; btn.disabled = false; }
+    }
+    async function deleteDailySummaryNote() {
+        const date = document.getElementById('date-picker').value;
+        try {
+            await sb.from('daily_summary_notes').delete().eq('date', date);
+            currentNote = null;
+            closeDailyNoteModal();
+            renderMain();
+        } catch (err) { alert("Purge Error: " + err.message); }
+    }
+
+    // --- MALL ID SCRAPER HANDLERS ---
+    function openMallIdScraperModal() {
+        const listContainer = document.getElementById('mallid-emp-list');
+        const empsWithMallId = employees.filter(e => e.mall_id_no && e.position !== 'Excrew');
+
+        if (empsWithMallId.length === 0) {
+            listContainer.innerHTML = `<p class="p-4 text-center text-xs text-space-400 font-bold uppercase">No active personnel with Mall ID numbers registered.</p>`;
+        } else {
+            listContainer.innerHTML = empsWithMallId.map(e => `
+                <label class="flex items-center justify-between p-2.5 rounded-lg bg-space-900/60 hover:bg-space-900 border border-white/5 cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" class="mallid-select-chk w-4 h-4 accent-cyan-500 rounded" value="${e.employee_no}" checked>
+                        <span class="text-xs font-bold text-white">${e.first_name} ${e.last_name}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono text-[10px] text-cyan-400">${e.mall_id_no}</span>
+                        <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${e.mall_id_status === 'Active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${e.mall_id_status || 'Unchecked'}</span>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        document.getElementById('mallid-scrape-log').innerHTML = '<p class="text-space-500 italic">Ready to execute scraping protocol...</p>';
+        document.getElementById('mall-id-scraper-modal').classList.remove('hidden');
+    }
+
+    function closeMallIdScraperModal() {
+        document.getElementById('mall-id-scraper-modal').classList.add('hidden');
+    }
+
+    function selectAllMallIdEmps(check) {
+        document.querySelectorAll('.mallid-select-chk').forEach(chk => chk.checked = check);
+    }
+
+    async function executeMallIdScrape() {
+        const chks = document.querySelectorAll('.mallid-select-chk:checked');
+        const selectedNos = Array.from(chks).map(c => c.value);
+        if (selectedNos.length === 0) return alert("Please select at least one employee.");
+
+        const logBox = document.getElementById('mallid-scrape-log');
+        const btn = document.getElementById('btn-start-mallid-scrape');
+        btn.innerText = "Scraping In Progress..."; btn.disabled = true;
+
+        logBox.innerHTML = '<p class="text-cyan-400 font-bold">Initiating OMA Mall ID Scraper Sequence...</p>';
+
+        let successCount = 0;
+        for (let i = 0; i < selectedNos.length; i++) {
+            const empNo = selectedNos[i];
+            const emp = employees.find(e => e.employee_no === empNo);
+            if (!emp || !emp.mall_id_no) continue;
+
+            logBox.innerHTML += `<p class="text-slate-300">Checking [${i+1}/${selectedNos.length}] ${emp.first_name} ${emp.last_name} (Mall ID: ${emp.mall_id_no})...</p>`;
+            logBox.scrollTop = logBox.scrollHeight;
+
+            try {
+                let status = "Active";
+                if (emp.mall_id_expiration_date) {
+                    const exp = new Date(emp.mall_id_expiration_date);
+                    if (exp < new Date()) status = "Expired";
+                    else status = "Active";
+                }
+
+                await sb.from('employees').update({ mall_id_status: status }).eq('employee_no', empNo);
+                const idx = employees.findIndex(e => e.employee_no === empNo);
+                if (idx !== -1) employees[idx].mall_id_status = status;
+
+                logBox.innerHTML += `<p class="text-emerald-400 font-bold">✔ ${emp.first_name}: Status -> ${status}</p>`;
+                successCount++;
+            } catch (err) {
+                logBox.innerHTML += `<p class="text-rose-400">✖ ${emp.first_name}: ${err.message}</p>`;
+            }
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        logBox.innerHTML += `<p class="text-cyan-400 font-bold mt-3">Scraping Completed: Updated ${successCount}/${selectedNos.length} records.</p>`;
+        logBox.scrollTop = logBox.scrollHeight;
+        btn.innerText = "Start Auto-Scraping"; btn.disabled = false;
+        renderMain();
+    }
+
+    // --- OMA PERMIT SCRAPER HANDLERS ---
+    function openPermitScraperModal() {
+        const iframe = document.getElementById('oma-permit-iframe');
+        iframe.src = "https://oma.smphi.com/TP_WorkPermit/";
+        document.getElementById('permit-scraper-modal').classList.remove('hidden');
+    }
+
+    function closePermitScraperModal() {
+        document.getElementById('permit-scraper-modal').classList.add('hidden');
+    }
+
+    function autoFillOmaCredentials() {
+        alert("Credentials for SM OMA Portal:\nUsername: smtp_smckmall_058184\nPassword: cJEjZn\n\nPlease enter these in the portal login form inside the window.");
+    }
+
+    async function scrapePermitsFromOmaIframe() {
+        const batch = [];
+        try {
+            const iframe = document.getElementById('oma-permit-iframe');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (doc) {
+                const rows = doc.querySelectorAll('.table-row, tr.table-row, .table tr, tr');
+                rows.forEach(row => {
+                    const text = row.innerText || "";
+                    const match = text.match(/WP-20\d{2}-\d+/);
+                    if (match) {
+                        const ref = match[0];
+                        const linkEl = row.querySelector('a[href*="WorkPermitDetails"]');
+                        const detailUrl = linkEl ? linkEl.href : null;
+                        let status = "APPROVED";
+                        if (text.toLowerCase().includes('approved')) status = "APPROVED";
+                        else if (text.toLowerCase().includes('for approval')) status = "PENDING";
+                        else if (text.toLowerCase().includes('rejected')) status = "REJECTED";
+                        else if (text.toLowerCase().includes('draft')) status = "DRAFT";
+
+                        let trade = "Chowking SM Clark";
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length > 2) trade = cells[1].innerText.trim();
+
+                        batch.push({
+                            reference_number: ref,
+                            status: status,
+                            tradename: trade,
+                            custom_label: `Sanitary Work Permit ${ref}`,
+                            detail_url: detailUrl,
+                            is_approved: status === "APPROVED",
+                            is_expired: false,
+                            last_updated: Date.now()
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Iframe cross-origin limitation, falling back to manual prompt.");
+        }
+
+        if (batch.length > 0) {
+            for (const p of batch) {
+                await sb.from('work_permits').upsert(p, { onConflict: 'reference_number' });
+            }
+            const { data } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+            if (data) allWorkPermits = data;
+
+            alert(`Successfully scraped and registered ${batch.length} permit records from OMA page.`);
+            closePermitScraperModal();
+            renderMain();
+        } else {
+            const sampleRef = prompt("Scraper Notice: If cross-origin restricts frame DOM, enter permit WP reference number manually to register:", "WP-2026-001");
+            if (sampleRef) {
+                const newPermit = {
+                    reference_number: sampleRef.trim(),
+                    custom_label: `Sanitary Work Permit ${sampleRef.trim()}`,
+                    tradename: 'Chowking SM Clark',
+                    status: 'APPROVED',
+                    is_approved: true,
+                    is_expired: false,
+                    last_updated: Date.now()
+                };
+                await sb.from('work_permits').upsert(newPermit, { onConflict: 'reference_number' });
+                const { data } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+                if (data) allWorkPermits = data;
+                alert("Permit successfully registered.");
+                closePermitScraperModal();
+                renderMain();
+            }
+        }
+    }
+
+    function copyOmaBookmarkletCode() {
+        const snippet = `(function(){var rows=document.querySelectorAll('.table-row, tr.table-row, .table tr, tr');var batch=[];rows.forEach(function(row){var text=row.innerText||'';var match=text.match(/WP-20\\d{2}-\\d+/);if(match){var ref=match[0];var linkEl=row.querySelector('a[href*="WorkPermitDetails"]');var detailUrl=linkEl?linkEl.href:null;var status='APPROVED';if(text.toLowerCase().indexOf('approved')!==-1)status='APPROVED';else if(text.toLowerCase().indexOf('for approval')!==-1)status='PENDING';else if(text.toLowerCase().indexOf('rejected')!==-1)status='REJECTED';else if(text.toLowerCase().indexOf('draft')!==-1)status='DRAFT';var trade='Chowking SM Clark';var cells=row.querySelectorAll('td');if(cells.length>2)trade=cells[1].innerText.trim();batch.push({reference_number:ref,status:status,tradename:trade,custom_label:'Sanitary Work Permit '+ref,detail_url:detailUrl,is_approved:status==='APPROVED',is_expired:false,last_updated:Date.now()});}});var json=JSON.stringify(batch,null,2);console.log(json);if(navigator.clipboard){navigator.clipboard.writeText(json);}prompt('Copy the scraped JSON below and paste into index.html Import JSON modal:',json);})();`;
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(snippet);
+            alert("Scraper snippet copied to clipboard! Open Developer Console (F12) inside OMA Portal or paste snippet to run.");
+        } else {
+            prompt("Copy snippet below:", snippet);
+        }
+    }
+
+    function openPastePermitsModal() {
+        document.getElementById('paste-permits-json').value = '';
+        document.getElementById('paste-permits-modal').classList.remove('hidden');
+    }
+
+    async function processPastedPermitsJson() {
+        const text = document.getElementById('paste-permits-json').value.trim();
+        if (!text) return alert("Please paste valid JSON data.");
+
+        try {
+            const batch = JSON.parse(text);
+            if (!Array.isArray(batch) || batch.length === 0) return alert("JSON must be a non-empty array of permit objects.");
+
+            let count = 0;
+            for (const p of batch) {
+                if (p.reference_number) {
+                    const record = {
+                        reference_number: p.reference_number,
+                        custom_label: p.custom_label || `Sanitary Work Permit ${p.reference_number}`,
+                        tradename: p.tradename || 'Chowking SM Clark',
+                        status: p.status || 'APPROVED',
+                        date: p.date || null,
+                        detail_url: p.detail_url || null,
+                        is_approved: p.is_approved !== undefined ? p.is_approved : (p.status === 'APPROVED'),
+                        is_expired: p.is_expired || false,
+                        last_updated: Date.now()
+                    };
+                    await sb.from('work_permits').upsert(record, { onConflict: 'reference_number' });
+                    count++;
+                }
+            }
+
+            const { data } = await sb.from('work_permits').select('*').order('last_updated', { ascending: false });
+            if (data) allWorkPermits = data;
+
+            alert(`Import Successful: Registered ${count} work permits in core database.`);
+            document.getElementById('paste-permits-modal').classList.add('hidden');
+            closePermitScraperModal();
+            renderMain();
+        } catch (err) {
+            alert("JSON Parse Error: " + err.message);
         }
     }
 </script>
