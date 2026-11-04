@@ -6663,7 +6663,7 @@ fun AddEmployeeScreen(
             }
             OutlinedTextField(value = emergencyContactPhone, onValueChange = { emergencyContactPhone = it }, label = { Text("Emergency Cellphone") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
             
-            val positions = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator")
+            val positions = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator", "Milksha", "Soda", "Halo-Halo")
             var expanded by remember { mutableStateOf(false) }
             
             ExposedDropdownMenuBox(
@@ -6849,7 +6849,7 @@ fun AddEmployeeScreen(
 
             if (isCertified) {
                 Text("Certified in:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
-                val posList = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator")
+                val posList = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator", "Milksha", "Soda", "Halo-Halo")
                 posList.chunked(2).forEach { row ->
                     Row(modifier = Modifier.fillMaxWidth()) {
                         row.forEach { pos ->
@@ -7352,7 +7352,7 @@ fun EditEmployeeScreen(
                 }
                 OutlinedTextField(value = emergencyContactPhone, onValueChange = { emergencyContactPhone = it }, label = { Text("Emergency Cellphone") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                 
-                val positions = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator")
+                val positions = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator", "Milksha", "Soda", "Halo-Halo")
                 var expanded by remember { mutableStateOf(false) }
                 
                 ExposedDropdownMenuBox(
@@ -7538,7 +7538,7 @@ fun EditEmployeeScreen(
 
                 if (isCertified) {
                     Text("Certified in:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
-                    val posList = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator")
+                    val posList = listOf("Team Leader", "Manager", "Assistant Manager", "Cashier", "Dispatch", "SS", "DJ", "CIC", "Assembler", "Fryer", "Backup", "Noodle", "So", "Excrew", "Buzzer", "Senior Crew", "Coordinator", "Milksha", "Soda", "Halo-Halo")
                     posList.chunked(2).forEach { row ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             row.forEach { pos ->
