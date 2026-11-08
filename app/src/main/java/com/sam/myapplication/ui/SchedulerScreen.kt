@@ -307,14 +307,36 @@ fun SchedulerScreen(
 
     if (showHiddenEmployeesDialog) {
         HiddenEmployeesDialog(allEmployees, allSchedules, weekDates, { emp ->
-            val mondayDate = weekDates[0].toString()
-            val existing = allSchedules.find { it.employeeId == emp.id && it.date == mondayDate }
-            if (existing?.tag == "HIDDEN") viewModel.deleteSchedule(existing) else viewModel.saveSchedule(EmployeeSchedule(emp.id, mondayDate, tag = "HIDDEN"))
+            val hiddenSchedules = allSchedules.filter { s ->
+                (s.employeeId == emp.id || s.employeeId == emp.employeeNo) && s.tag == "HIDDEN"
+            }
+            hiddenSchedules.forEach { s ->
+                viewModel.deleteSchedule(s)
+            }
+            if (emp.isHiddenFromScheduler) {
+                viewModel.updateEmployee(context, emp.copy(isHiddenFromScheduler = false))
+            }
         }, { showHiddenEmployeesDialog = false })
     }
 
     if (employeeToDelete != null) {
-        AlertDialog(onDismissRequest = { employeeToDelete = null }, title = { Text("Hide Employee") }, text = { Text("Hide ${employeeToDelete?.firstName} from this week's scheduler?") }, confirmButton = { TextButton(onClick = { val mondayDate = weekDates[0].toString(); viewModel.saveSchedule(EmployeeSchedule(employeeToDelete!!.id, mondayDate, tag = "HIDDEN")); employeeToDelete = null }) { Text("Hide") } }, dismissButton = { TextButton(onClick = { employeeToDelete = null }) { Text("Cancel") } })
+        AlertDialog(
+            onDismissRequest = { employeeToDelete = null },
+            title = { Text("Hide Employee") },
+            text = { Text("Hide ${employeeToDelete?.firstName ?: ""} from this week's scheduler?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val targetEmp = employeeToDelete!!
+                    val mondayDate = weekDates[0].toString()
+                    viewModel.saveSchedule(EmployeeSchedule(targetEmp.id, mondayDate, tag = "HIDDEN"))
+                    if (!targetEmp.employeeNo.isNullOrBlank() && targetEmp.employeeNo != targetEmp.id) {
+                        viewModel.saveSchedule(EmployeeSchedule(targetEmp.employeeNo!!, mondayDate, tag = "HIDDEN"))
+                    }
+                    employeeToDelete = null
+                }) { Text("Hide", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { employeeToDelete = null }) { Text("Cancel") } }
+        )
     }
 
     if (editingOrderEmployee != null) {
@@ -482,10 +504,65 @@ fun AddEmployeeDialog(
 }
 
 @Composable
-fun HiddenEmployeesDialog(allEmployees: List<Employee>, allSchedules: List<EmployeeSchedule>, weekDates: List<LocalDate>, onToggleVisibility: (Employee) -> Unit, onDismiss: () -> Unit) {
-    val mondayDate = weekDates[0].toString()
-    val hiddenEmps = allEmployees.filter { emp -> allSchedules.any { s -> s.employeeId == emp.id && s.date == mondayDate && s.tag == "HIDDEN" } }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Hidden Employees (This Week)") }, text = { LazyColumn { items(hiddenEmps) { emp -> Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { Text(emp.firstName ?: "", modifier = Modifier.weight(1f)); TextButton(onClick = { onToggleVisibility(emp) }) { Text("Unhide") } } } } }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } })
+fun HiddenEmployeesDialog(
+    allEmployees: List<Employee>, 
+    allSchedules: List<EmployeeSchedule>, 
+    weekDates: List<LocalDate>, 
+    onToggleVisibility: (Employee) -> Unit, 
+    onDismiss: () -> Unit
+) {
+    val hiddenEmps = remember(allEmployees, allSchedules, weekDates) {
+        allEmployees.filter { emp -> 
+            emp.isHiddenFromScheduler || 
+            allSchedules.any { s -> 
+                (s.employeeId == emp.id || s.employeeId == emp.employeeNo) && s.tag == "HIDDEN" 
+            } 
+        }.distinctBy { it.id }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss, 
+        title = { Text("Hidden Employees (Scheduler)") }, 
+        text = { 
+            if (hiddenEmps.isEmpty()) {
+                Text("No hidden employees in scheduler.", modifier = Modifier.padding(16.dp))
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) { 
+                    items(hiddenEmps) { emp -> 
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), 
+                            verticalAlignment = Alignment.CenterVertically
+                        ) { 
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "${emp.firstName ?: ""} ${emp.lastName ?: ""}".trim().ifEmpty { emp.employeeNo ?: "Employee" },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "ID: ${emp.employeeNo ?: emp.id} • ${emp.position ?: "Crew"}",
+                                    fontSize = 10.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                            Button(
+                                onClick = { onToggleVisibility(emp) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) { 
+                                Text("Unhide") 
+                            } 
+                        }
+                        HorizontalDivider(thickness = 0.5.dp)
+                    } 
+                } 
+            }
+        }, 
+        confirmButton = { 
+            TextButton(onClick = onDismiss) { 
+                Text("Close") 
+            } 
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
