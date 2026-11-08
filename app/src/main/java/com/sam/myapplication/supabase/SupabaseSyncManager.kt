@@ -927,6 +927,20 @@ class SupabaseSyncManager(
         }
     }
 
+    suspend fun deleteScheduleFromSupabase(employeeId: String, date: String) {
+        try {
+            client.postgrest["employee_schedules"]
+                .delete {
+                    filter {
+                        eq("employee_id", employeeId)
+                        eq("date", date)
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e("SupabaseSyncManager", "Failed to delete schedule from Supabase: ${e.message}")
+        }
+    }
+
     suspend fun syncSchedules() {
         downloadSchedules()
         uploadSchedules()

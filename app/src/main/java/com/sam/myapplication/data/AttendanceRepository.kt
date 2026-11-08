@@ -229,23 +229,28 @@ class AttendanceRepository(
         }
     }
 
+    suspend fun deleteScheduleDirect(schedule: EmployeeSchedule) {
+        val existing = scheduleDao.getScheduleSync(schedule.employeeId, schedule.date)
+        if (existing != null) {
+            scheduleDao.deleteSchedule(existing)
+        } else {
+            scheduleDao.deleteSchedule(schedule)
+        }
+    }
+
     suspend fun clearScheduleSafe(schedule: EmployeeSchedule) {
         val existing = scheduleDao.getScheduleSync(schedule.employeeId, schedule.date)
         if (existing != null) {
-            // If it has metadata (position, order, or is a HIDDEN marker), keep it but clear the shift
-            if (existing.position != null || existing.schedulerOrder != null || existing.tag == "HIDDEN") {
+            if (existing.tag == "HIDDEN") {
+                scheduleDao.deleteSchedule(existing)
+            } else if (existing.position != null || existing.schedulerOrder != null) {
                 val cleared = existing.copy(
                     scheduleText = null,
-                    tag = null, // Note: If tag was HIDDEN, this clears it? No, maybe keep tag if it was important? 
-                    // Usually RD/RRD/SICK/NS are the tags to clear. HIDDEN is metadata.
+                    tag = null,
                     color = null,
                     fontColor = null
                 )
-                // If it was HIDDEN, we probably want to keep it HIDDEN until restored.
-                // But the "Clear" button in the dialog is for the shift.
-                val finalCleared = if (existing.tag == "HIDDEN") cleared.copy(tag = "HIDDEN") else cleared
-                
-                scheduleDao.insertSchedule(finalCleared)
+                scheduleDao.insertSchedule(cleared)
             } else {
                 scheduleDao.deleteSchedule(existing)
             }

@@ -1210,7 +1210,12 @@ class AttendanceViewModel(
 
     fun deleteSchedule(schedule: EmployeeSchedule) {
         viewModelScope.launch { 
-            repository.clearScheduleSafe(schedule)
+            repository.deleteScheduleDirect(schedule)
+            launch(Dispatchers.IO) {
+                try {
+                    supabaseSync.deleteScheduleFromSupabase(schedule.employeeId, schedule.date)
+                } catch (e: Exception) {}
+            }
         }
     }
 

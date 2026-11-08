@@ -310,8 +310,17 @@ fun SchedulerScreen(
             val hiddenSchedules = allSchedules.filter { s ->
                 (s.employeeId == emp.id || s.employeeId == emp.employeeNo) && s.tag == "HIDDEN"
             }
-            hiddenSchedules.forEach { s ->
-                viewModel.deleteSchedule(s)
+            if (hiddenSchedules.isNotEmpty()) {
+                hiddenSchedules.forEach { s ->
+                    viewModel.deleteSchedule(s)
+                }
+            } else {
+                weekDates.forEach { date ->
+                    viewModel.deleteSchedule(EmployeeSchedule(emp.id, date.toString(), tag = "HIDDEN"))
+                    if (!emp.employeeNo.isNullOrBlank() && emp.employeeNo != emp.id) {
+                        viewModel.deleteSchedule(EmployeeSchedule(emp.employeeNo!!, date.toString(), tag = "HIDDEN"))
+                    }
+                }
             }
             if (emp.isHiddenFromScheduler) {
                 viewModel.updateEmployee(context, emp.copy(isHiddenFromScheduler = false))
