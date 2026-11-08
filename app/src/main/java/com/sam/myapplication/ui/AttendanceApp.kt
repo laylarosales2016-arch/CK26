@@ -1768,6 +1768,22 @@ fun EmployeeListScreen(
         }
     }
 
+    val exportMasterlistLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.ms-excel")
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openOutputStream(it)?.let { outputStream ->
+                viewModel.exportMasterlistToExcel(outputStream) { success ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (success) "Masterlist exported to Excel!" else "Export failed"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1973,6 +1989,14 @@ fun EmployeeListScreen(
                                                 }
                                             },
                                             leadingIcon = { Icon(Icons.Default.FileUpload, null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Export Masterlist to Excel (.xls)", fontWeight = FontWeight.Bold) },
+                                            onClick = {
+                                                showMenu = false
+                                                exportMasterlistLauncher.launch("Chowking_Masterlist_${LocalDate.now()}.xls")
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary) }
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Complete Backup (Local/Offline)") },

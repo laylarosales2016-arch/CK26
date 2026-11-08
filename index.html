@@ -501,6 +501,9 @@
                 <button id="btn-add-attrition-action" onclick="openAttritionEntryModal()" class="hidden bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-amber-500/30 transition-all whitespace-nowrap shadow-inner">
                     <i class="fa-solid fa-user-minus mr-2 text-[8px]"></i>Log Detachment
                 </button>
+                <button id="btn-export-masterlist-action" onclick="exportMasterlistCSV()" class="hidden bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500/30 transition-all whitespace-nowrap shadow-inner">
+                    <i class="fa-solid fa-file-excel mr-2 text-[8px]"></i>Export Masterlist
+                </button>
                 <button id="btn-open-mallid-scraper" onclick="openMallIdScraperModal()" class="hidden bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-xl px-4 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-cyan-500/30 transition-all whitespace-nowrap shadow-inner">
                     <i class="fa-solid fa-robot mr-2 text-[8px]"></i>Mall ID Scraper
                 </button>
@@ -3054,16 +3057,85 @@
         const addEmpBtn = document.getElementById('btn-add-emp-action');
         const addDaBtn = document.getElementById('btn-add-da-action');
         const addAttrBtn = document.getElementById('btn-add-attrition-action');
+        const exportMasterlistBtn = document.getElementById('btn-export-masterlist-action');
         const editDayNoteBtn = document.getElementById('btn-edit-day-note');
         const openMallIdScraperBtn = document.getElementById('btn-open-mallid-scraper');
 
         if (addEmpBtn) addEmpBtn.classList.toggle('hidden', !isAdmin || tab !== 'employees');
         if (addDaBtn) addDaBtn.classList.toggle('hidden', !isAdmin || tab !== 'da');
         if (addAttrBtn) addAttrBtn.classList.toggle('hidden', !isAdmin || tab !== 'attrition');
+        if (exportMasterlistBtn) exportMasterlistBtn.classList.toggle('hidden', !isAdmin || tab !== 'employees');
         if (editDayNoteBtn) editDayNoteBtn.classList.toggle('hidden', !isAdmin || tab !== 'attendance');
         if (openMallIdScraperBtn) openMallIdScraperBtn.classList.toggle('hidden', !isAdmin || tab !== 'employees');
 
         renderMain();
+    }
+
+    function exportMasterlistCSV() {
+        if (!employees || employees.length === 0) return alert("No personnel records mapped to export.");
+
+        const excludedPositions = ["senior crew", "assistant manager", "administrator", "manager", "excrew"];
+        const positionOrder = ["coordinator", "team leader", "cashier", "dispatch", "ss", "cic", "assembler", "fryer", "backup", "noodle", "so", "dine in", "dj", "buzzer", "crew"];
+
+        const filtered = employees.filter(emp => {
+            const pos = (emp.position || '').toLowerCase();
+            return !excludedPositions.some(ex => pos.includes(ex));
+        }).sort((a, b) => {
+            const posA = (a.position || '').toLowerCase();
+            const posB = (b.position || '').toLowerCase();
+            const idxA = positionOrder.findIndex(p => posA.includes(p));
+            const idxB = positionOrder.findIndex(p => posB.includes(p));
+            const orderA = idxA === -1 ? 999 : idxA;
+            const orderB = idxB === -1 ? 999 : idxB;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.first_name || '').localeCompare(b.first_name || '');
+        });
+
+        const headers = [
+            "Employee ID", "First Name", "Last Name", "Position", "Certification Status",
+            "Marital Status", "Date Hired", "Age", "Phone Number", "Email",
+            "SSS", "TIN", "PhilHealth", "Pag-IBIG", "Mall ID No", "Mall ID Status",
+            "Bank Institution", "Bank Account Number", "Certified Stations",
+            "Emergency Contact Name", "Emergency Contact Relationship", "Emergency Contact Phone"
+        ];
+
+        const rows = filtered.map(emp => {
+            const certList = getCertifiedPositionsArray(emp).join(" / ");
+            const age = calculateAge(emp.birthday);
+            return [
+                `"${emp.employee_no || ''}"`,
+                `"${emp.first_name || ''}"`,
+                `"${emp.last_name || ''}"`,
+                `"${emp.position || 'Crew'}"`,
+                `"${emp.is_certified || certList ? 'Certified' : 'Uncertified'}"`,
+                `"${emp.marital_status || 'Single'}"`,
+                `"${emp.date_hired || ''}"`,
+                `"${age !== null ? age : ''}"`,
+                `"${emp.phone_number || emp.cp_number || ''}"`,
+                `"${emp.email || ''}"`,
+                `"${emp.sss || ''}"`,
+                `"${emp.tin_number || ''}"`,
+                `"${emp.phil_health || ''}"`,
+                `"${emp.pagibig || ''}"`,
+                `"${emp.mall_id_no || ''}"`,
+                `"${emp.mall_id_status || ''}"`,
+                `"${emp.bank || ''}"`,
+                `"${emp.bank_account_number || ''}"`,
+                `"${certList}"`,
+                `"${emp.emergency_contact_name || ''}"`,
+                `"${emp.emergency_contact_relationship || ''}"`,
+                `"${emp.emergency_contact_phone || ''}"`
+            ].join(",");
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Chowking_Masterlist_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     async function fetchSummary(date) {

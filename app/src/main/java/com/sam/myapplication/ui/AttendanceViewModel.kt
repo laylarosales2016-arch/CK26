@@ -1787,6 +1787,104 @@ class AttendanceViewModel(
         }
     }
 
+    private fun calculateAge(birthdayStr: String?): Int? {
+        if (birthdayStr.isNullOrBlank()) return null
+        return try {
+            val bday = java.time.LocalDate.parse(birthdayStr.trim())
+            val today = java.time.LocalDate.now()
+            java.time.Period.between(bday, today).years
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun exportMasterlistToExcel(outputStream: OutputStream, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _syncStatus.value = "Exporting Masterlist to Excel..."
+                val excludedPositions = listOf("senior crew", "assistant manager", "administrator", "manager", "excrew")
+                val positionOrder = listOf("coordinator", "team leader", "cashier", "dispatch", "ss", "cic", "assembler", "fryer", "backup", "noodle", "so", "dine in", "dj", "buzzer", "crew")
+
+                val employees = repository.allEmployees.first().filter { emp ->
+                    val pos = (emp.position ?: "").lowercase()
+                    excludedPositions.none { ex -> pos.contains(ex) }
+                }.sortedWith(compareBy({ emp ->
+                    val pos = (emp.position ?: "").lowercase()
+                    val index = positionOrder.indexOfFirst { pos.contains(it) }
+                    if (index == -1) 999 else index
+                }, { emp -> emp.firstName ?: "" }))
+
+                val html = StringBuilder()
+
+                html.append("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">")
+                html.append("<head><meta charset=\"utf-8\"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Masterlist</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>")
+                html.append("<body><table border=\"1\">")
+
+                // Header Row
+                html.append("<tr style=\"background-color:#0b0f19; color:#22d3ee; font-weight:bold;\">")
+                html.append("<th>Employee ID</th>")
+                html.append("<th>Full Name</th>")
+                html.append("<th>Position</th>")
+                html.append("<th>Certification</th>")
+                html.append("<th>Marital Status</th>")
+                html.append("<th>Date Hired</th>")
+                html.append("<th>Age</th>")
+                html.append("<th>Phone Number</th>")
+                html.append("<th>Email</th>")
+                html.append("<th>SSS</th>")
+                html.append("<th>TIN</th>")
+                html.append("<th>PhilHealth</th>")
+                html.append("<th>Pag-IBIG</th>")
+                html.append("<th>Mall ID No</th>")
+                html.append("<th>Bank</th>")
+                html.append("<th>Account Number</th>")
+                html.append("<th>Certified Stations</th>")
+                html.append("<th>Emergency Contact</th>")
+                html.append("<th>Emergency Phone</th>")
+                html.append("</tr>")
+
+                employees.forEach { emp ->
+                    val fullName = "${emp.firstName ?: ""} ${emp.lastName ?: ""}".trim()
+                    val certList = emp.certifiedPositions?.joinToString(", ") ?: ""
+                    val age = calculateAge(emp.birthday)
+                    val ageStr = if (age != null) "$age yrs" else "--"
+
+                    html.append("<tr>")
+                    html.append("<td>${emp.employeeNo ?: emp.id}</td>")
+                    html.append("<td>$fullName</td>")
+                    html.append("<td>${emp.position ?: "Crew"}</td>")
+                    html.append("<td>${if (emp.isCertified == true || !emp.certifiedPositions.isNullOrEmpty()) "Certified" else "Uncertified"}</td>")
+                    html.append("<td>${emp.maritalStatus ?: "Single"}</td>")
+                    html.append("<td>${emp.dateHired ?: "--"}</td>")
+                    html.append("<td>$ageStr</td>")
+                    html.append("<td>${emp.phoneNumber ?: emp.cpNumber ?: "--"}</td>")
+                    html.append("<td>${emp.email ?: "--"}</td>")
+                    html.append("<td>${emp.sss ?: "--"}</td>")
+                    html.append("<td>${emp.tinNumber ?: "--"}</td>")
+                    html.append("<td>${emp.philHealth ?: "--"}</td>")
+                    html.append("<td>${emp.pagibig ?: "--"}</td>")
+                    html.append("<td>${emp.mallIdNo ?: "--"}</td>")
+                    html.append("<td>${emp.bank ?: "--"}</td>")
+                    html.append("<td>${emp.bankAccountNumber ?: "--"}</td>")
+                    html.append("<td>$certList</td>")
+                    html.append("<td>${emp.emergencyContactName ?: "--"}</td>")
+                    html.append("<td>${emp.emergencyContactPhone ?: "--"}</td>")
+                    html.append("</tr>")
+                }
+
+                html.append("</table></body></html>")
+
+                outputStream.use { it.write(html.toString().toByteArray(Charsets.UTF_8)) }
+                _syncStatus.value = "Masterlist exported to Excel successfully"
+                onComplete(true)
+            } catch (e: Exception) {
+                Log.e("AttendanceViewModel", "Masterlist Excel export failed", e)
+                _syncStatus.value = "Excel export failed"
+                onComplete(false)
+            }
+        }
+    }
+
     fun importEmployees(ctx: Context, inputStream: InputStream, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
