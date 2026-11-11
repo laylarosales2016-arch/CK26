@@ -275,6 +275,7 @@ sealed class Screen(val route: String) {
     object AddEmployee : Screen("add_employee")
     object Permit : Screen("permit")
     object Scheduler : Screen("scheduler")
+    object CODPortal : Screen("cod_portal")
     data class ExternalWeb(val url: String, val title: String) : Screen("external_web?url=${android.net.Uri.encode(url)}&title=$title") {
         companion object {
             const val routePattern = "external_web?url={url}&title={title}"
@@ -734,8 +735,9 @@ fun AttendanceApp(viewModel: AttendanceViewModel) {
                             onPermitClick = { navController.navigate(Screen.Permit.route) },
                             onSchedulerClick = { navController.navigate(Screen.Scheduler.route) },
                             onChatClick = { navController.navigate(Screen.Chat.route) },
-                        onSendMessageClick = { id, name -> navController.navigate(Screen.ChatDetail(id, name).route) },
-                        onExternalWebClick = { url, title -> navController.navigate(Screen.ExternalWeb(url, title).route) }
+                            onCODClick = { navController.navigate(Screen.CODPortal.route) },
+                            onSendMessageClick = { id, name -> navController.navigate(Screen.ChatDetail(id, name).route) },
+                            onExternalWebClick = { url, title -> navController.navigate(Screen.ExternalWeb(url, title).route) }
                         )
                     } else {
                         // Security fallback: If a non-admin somehow reaches the list, send them home
@@ -772,6 +774,16 @@ fun AttendanceApp(viewModel: AttendanceViewModel) {
                 composable(Screen.Scheduler.route) {
                     SchedulerScreen(
                         viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.CODPortal.route) {
+                    val employees by viewModel.allEmployees.collectAsState()
+                    LaunchedEffect(Unit) {
+                        viewModel.fetchCODReports()
+                    }
+                    com.example.cod.ui.CODMainScreen(
+                        appEmployees = employees,
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -1076,6 +1088,7 @@ fun EmployeeListScreen(
     onPermitClick: () -> Unit,
     onSchedulerClick: () -> Unit,
     onChatClick: () -> Unit,
+    onCODClick: () -> Unit,
     onSendMessageClick: (String, String) -> Unit,
     onExternalWebClick: (String, String) -> Unit
 ) {
@@ -1890,6 +1903,14 @@ fun EmployeeListScreen(
                                             onClick = { menuCategory = "announcement" },
                                             leadingIcon = { Icon(Icons.Default.Announcement, null) },
                                             trailingIcon = { Icon(Icons.Default.ChevronRight, null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Code of Discipline (COD)", fontWeight = FontWeight.Bold) },
+                                            onClick = {
+                                                showMenu = false
+                                                onCODClick()
+                                            },
+                                            leadingIcon = { Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) }
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Target Headcount", fontWeight = FontWeight.Bold) },

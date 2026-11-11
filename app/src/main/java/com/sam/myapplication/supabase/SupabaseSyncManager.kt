@@ -424,6 +424,12 @@ class SupabaseSyncManager(
             val allDTR = client.postgrest["daily_time_records"].select().decodeList<DailyTimeRecord>()
             val allRequests = client.postgrest["requests"].select().decodeList<AttendanceRequest>()
 
+            try {
+                downloadCODReports()
+            } catch (e: Exception) {
+                Log.e("SupabaseSync", "Failed to download COD reports during retrieveAllData: ${e.message}")
+            }
+
             // If we reached here without exception, clearing local is safe as we have fresh data
             repository.clearAllAttendance()
             repository.clearAllDTR()
@@ -978,6 +984,125 @@ class SupabaseSyncManager(
             
         } catch (e: Exception) {
             Log.e("SupabaseSyncManager", "Failed to sync chat messages: ${e.message}")
+        }
+    }
+
+    // --- COD INCIDENT REPORTS SUPABASE SYNC ---
+    suspend fun downloadCODReports() {
+        try {
+            val remoteReports = client.postgrest["cod_incident_reports"]
+                .select()
+                .decodeList<kotlinx.serialization.json.JsonObject>()
+
+            val parsedList = remoteReports.mapNotNull { obj ->
+                try {
+                    val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                    val title = obj["title"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val offenderName = obj["offender_name"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val incidentSource = obj["incident_source"]?.jsonPrimitive?.contentOrNull ?: "Store Complaint"
+                    val date = obj["date"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val incidentDate = obj["incident_date"]?.jsonPrimitive?.contentOrNull ?: date
+                    val incidentTime = obj["incident_time"]?.jsonPrimitive?.contentOrNull ?: "12:00 PM"
+                    val ruleId = obj["rule_id"]?.jsonPrimitive?.contentOrNull
+                    val ruleDesc = obj["rule_description"]?.jsonPrimitive?.contentOrNull ?: "None"
+                    val catStr = obj["category"]?.jsonPrimitive?.contentOrNull
+                    val category = if (catStr != null) try { com.example.cod.model.OffenseCategory.valueOf(catStr) } catch (e: Exception) { null } else null
+                    val offenseCount = obj["offense_count"]?.jsonPrimitive?.contentOrNull ?: "None"
+                    val penalty = obj["recommended_penalty"]?.jsonPrimitive?.contentOrNull ?: "None"
+                    val details = obj["details"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val statusStr = obj["status"]?.jsonPrimitive?.contentOrNull ?: "PENDING"
+                    val status = try { com.example.cod.model.ReportStatus.valueOf(statusStr) } catch (e: Exception) { com.example.cod.model.ReportStatus.PENDING }
+                    val valStr = obj["validity"]?.jsonPrimitive?.contentOrNull ?: "VALID"
+                    val validity = try { com.example.cod.model.ReportValidity.valueOf(valStr) } catch (e: Exception) { com.example.cod.model.ReportValidity.VALID }
+                    val ts = obj["timestamp"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
+
+                    val complaintFormUris = try {
+                        obj["complaint_form_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+                    } catch (e: Exception) { emptyList() }
+
+                    val employeeIrPhotoUris = try {
+                        obj["employee_ir_photo_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+                    } catch (e: Exception) { emptyList() }
+
+                    val rtwFusionFormUris = try {
+                        obj["rtw_fusion_form_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+                    } catch (e: Exception) { emptyList() }
+
+                    com.example.cod.model.IncidentReport(
+                        id = id,
+                        title = title,
+                        offenderName = offenderName,
+                        offenderNames = if (offenderName.isNotBlank()) offenderName.split(", ") else emptyList(),
+                        incidentSource = incidentSource,
+                        date = date,
+                        incidentDate = incidentDate,
+                        incidentTime = incidentTime,
+                        ruleId = ruleId,
+                        ruleDescription = ruleDesc,
+                        category = category,
+                        offenseCount = offenseCount,
+                        recommendedPenalty = penalty,
+                        details = details,
+                        complaintFormUris = complaintFormUris,
+                        employeeIrPhotoUris = employeeIrPhotoUris,
+                        rtwFusionFormUris = rtwFusionFormUris,
+                        status = status,
+                        validity = validity,
+                        timestamp = ts
+                    )
+                } catch (e: Exception) { null }
+            }
+
+            if (parsedList.isNotEmpty()) {
+                com.example.cod.data.CODRepository.setAllData(
+                    parsedList,
+                    com.example.cod.data.CODRepository.employeesFlow.value
+                )
+            }
+            Log.d("SupabaseSyncManager", "Downloaded COD reports: ${parsedList.size}")
+        } catch (e: Exception) {
+            Log.e("SupabaseSyncManager", "Failed to download COD reports: ${e.message}")
+        }
+    }
+
+    suspend fun uploadCODReport(report: com.example.cod.model.IncidentReport) {
+        try {
+            val payload = buildJsonObject {
+                put("id", JsonPrimitive(report.id))
+                put("title", JsonPrimitive(report.title))
+                put("offender_name", JsonPrimitive(report.offenderName))
+                put("incident_source", JsonPrimitive(report.incidentSource))
+                put("date", JsonPrimitive(report.date))
+                put("incident_date", JsonPrimitive(report.incidentDate))
+                put("incident_time", JsonPrimitive(report.incidentTime))
+                put("rule_id", if (report.ruleId != null) JsonPrimitive(report.ruleId) else JsonNull)
+                put("rule_description", JsonPrimitive(report.ruleDescription))
+                put("category", if (report.category != null) JsonPrimitive(report.category.name) else JsonNull)
+                put("offense_count", JsonPrimitive(report.offenseCount))
+                put("recommended_penalty", JsonPrimitive(report.recommendedPenalty))
+                put("details", JsonPrimitive(report.details))
+                put("complaint_form_uris", json.encodeToJsonElement(report.complaintFormUris))
+                put("employee_ir_photo_uris", json.encodeToJsonElement(report.employeeIrPhotoUris))
+                put("rtw_fusion_form_uris", json.encodeToJsonElement(report.rtwFusionFormUris))
+                put("status", JsonPrimitive(report.status.name))
+                put("validity", JsonPrimitive(report.validity.name))
+                put("timestamp", JsonPrimitive(report.timestamp))
+            }
+            client.postgrest["cod_incident_reports"].upsert(payload) { onConflict = "id" }
+            Log.d("SupabaseSyncManager", "Uploaded COD report: ${report.id}")
+        } catch (e: Exception) {
+            Log.e("SupabaseSyncManager", "Failed to upload COD report: ${e.message}")
+        }
+    }
+
+    suspend fun deleteCODReportFromSupabase(reportId: String) {
+        try {
+            client.postgrest["cod_incident_reports"].delete {
+                filter { eq("id", reportId) }
+            }
+            Log.d("SupabaseSyncManager", "Deleted COD report from Supabase: $reportId")
+        } catch (e: Exception) {
+            Log.e("SupabaseSyncManager", "Failed to delete COD report from Supabase: ${e.message}")
         }
     }
 }

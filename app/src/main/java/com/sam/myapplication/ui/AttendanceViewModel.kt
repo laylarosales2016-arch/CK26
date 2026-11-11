@@ -73,11 +73,27 @@ class AttendanceViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), connectivityManager.activeNetwork != null)
 
     init {
-        // Automatically sync settings on startup
+        com.example.cod.data.CODRepository.onReportSavedListener = { report ->
+            viewModelScope.launch(Dispatchers.IO) {
+                supabaseSync.uploadCODReport(report)
+            }
+        }
+        com.example.cod.data.CODRepository.onReportDeletedListener = { reportId ->
+            viewModelScope.launch(Dispatchers.IO) {
+                supabaseSync.deleteCODReportFromSupabase(reportId)
+            }
+        }
+
+        // Automatically sync settings and COD reports on startup
         viewModelScope.launch {
             syncSettings()
             supabaseSync.syncShiftTemplates()
             supabaseSync.syncSchedules()
+            try {
+                supabaseSync.downloadCODReports()
+            } catch (e: Exception) {
+                Log.e("AttendanceViewModel", "Startup COD download failed: ${e.message}")
+            }
         }
 
         // Subscribe to chat when logged in
@@ -586,9 +602,10 @@ class AttendanceViewModel(
         viewModelScope.launch {
             try {
                 _syncProgress.value = 0.1f
-                _syncStatus.value = "Downloading database..."
+                _syncStatus.value = "Downloading database & COD logs..."
                 // 1. Sync all records from Database
                 supabaseSync.retrieveAllData()
+                supabaseSync.downloadCODReports()
                 
                 // 1.1 Sync target headcount & excluded IDs
                 syncSettings()
@@ -1269,6 +1286,16 @@ class AttendanceViewModel(
                 _syncStatus.value = "Download complete"
             } catch (e: Exception) {
                 _syncStatus.value = "Download failed: ${e.message}"
+            }
+        }
+    }
+
+    fun fetchCODReports() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                supabaseSync.downloadCODReports()
+            } catch (e: Exception) {
+                Log.e("AttendanceViewModel", "COD reports fetch failed: ${e.message}")
             }
         }
     }
