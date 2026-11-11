@@ -69,7 +69,7 @@ object GoogleDriveSyncManager {
                     val jsonResp = JSONObject(responseStr)
                     val driveUrl = jsonResp.optString("fileUrl", jsonResp.optString("url", ""))
                     Log.d("GoogleDriveSync", "Photo successfully uploaded to Google Drive: $driveUrl")
-                    if (driveUrl.isNotBlank()) driveUrl else Uri.fromFile(compressedFile).toString()
+                    if (driveUrl.isNotBlank()) convertToDirectDriveUrl(driveUrl) else Uri.fromFile(compressedFile).toString()
                 } else {
                     Log.e("GoogleDriveSync", "Google Drive Upload HTTP Error: $responseCode")
                     Uri.fromFile(compressedFile).toString()
@@ -78,6 +78,45 @@ object GoogleDriveSyncManager {
                 Log.e("GoogleDriveSync", "Failed to upload photo to Google Drive: ${e.message}")
                 null
             }
+        }
+    }
+
+    fun convertToDirectDriveUrl(url: String): String {
+        if (url.isBlank()) return url
+        if (url.contains("drive.google.com/file/d/")) {
+            val fileId = url.substringAfter("file/d/").substringBefore("/")
+            return "https://drive.google.com/uc?export=download&id=$fileId"
+        }
+        if (url.contains("drive.google.com/open?id=")) {
+            val fileId = url.substringAfter("open?id=").substringBefore("&")
+            return "https://drive.google.com/uc?export=download&id=$fileId"
+        }
+        return url
+    }
+
+    suspend fun uploadPhotoToGoogleDriveIfNotUploaded(
+        context: Context,
+        photoUriStr: String,
+        customFileName: String? = null
+    ): String {
+        if (photoUriStr.isBlank()) return photoUriStr
+
+        if (photoUriStr.contains("drive.google.com") || photoUriStr.startsWith("http://") || photoUriStr.startsWith("https://")) {
+            Log.d("GoogleDriveSync", "Photo already uploaded to Google Drive. Skipping duplicate upload: $photoUriStr")
+            return convertToDirectDriveUrl(photoUriStr)
+        }
+
+        return try {
+            val uri = Uri.parse(photoUriStr)
+            val uploadedUrl = uploadPhotoToGoogleDrive(context, uri, customFileName)
+            if (!uploadedUrl.isNullOrBlank() && (uploadedUrl.startsWith("http://") || uploadedUrl.startsWith("https://"))) {
+                convertToDirectDriveUrl(uploadedUrl)
+            } else {
+                photoUriStr
+            }
+        } catch (e: Exception) {
+            Log.e("GoogleDriveSync", "Error uploading photo to Drive: ${e.message}")
+            photoUriStr
         }
     }
 

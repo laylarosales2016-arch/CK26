@@ -1149,26 +1149,43 @@ fun EditReportDialog(
                     if (title.isBlank() || involvedEmployees.isEmpty() || details.isBlank() || incidentDate.isBlank() || incidentTime.isBlank()) {
                         errorMessage = "Please fill in all required fields and specify at least 1 employee involved."
                     } else {
-                        val updated = report.copy(
-                            title = title.trim(),
-                            offenderName = involvedEmployees.joinToString(", "),
-                            offenderNames = involvedEmployees.toList(),
-                            incidentSource = selectedSource,
-                            incidentDate = incidentDate.trim(),
-                            incidentTime = incidentTime.trim(),
-                            ruleId = selectedRule?.id,
-                            ruleDescription = selectedRule?.description ?: "None (No Rule Violation Selected)",
-                            category = selectedRule?.category,
-                            offenseCount = if (selectedRule != null) selectedOffenseCount else "None",
-                            recommendedPenalty = recommendedPenalty,
-                            details = details.trim(),
-                            complaintFormUris = complaintFormUris.toList(),
-                            employeeIrPhotoUris = employeeIrPhotoUris.toList(),
-                            rtwFusionFormUris = rtwFusionFormUris.toList(),
-                            status = status,
-                            validity = validity
-                        )
-                        onSave(updated)
+                        scope.launch(Dispatchers.IO) {
+                            val finalComplaintUris = complaintFormUris.mapIndexed { idx, uri ->
+                                val fileName = buildDriveFileName("ComplaintForm_$idx")
+                                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                            }
+                            val finalIrUris = employeeIrPhotoUris.mapIndexed { idx, uri ->
+                                val fileName = buildDriveFileName("EmployeeIR_$idx")
+                                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                            }
+                            val finalRtwUris = rtwFusionFormUris.mapIndexed { idx, uri ->
+                                val fileName = buildDriveFileName("RTWFusion_$idx")
+                                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                            }
+
+                            val updated = report.copy(
+                                title = title.trim(),
+                                offenderName = involvedEmployees.joinToString(", "),
+                                offenderNames = involvedEmployees.toList(),
+                                incidentSource = selectedSource,
+                                incidentDate = incidentDate.trim(),
+                                incidentTime = incidentTime.trim(),
+                                ruleId = selectedRule?.id,
+                                ruleDescription = selectedRule?.description ?: "None (No Rule Violation Selected)",
+                                category = selectedRule?.category,
+                                offenseCount = if (selectedRule != null) selectedOffenseCount else "None",
+                                recommendedPenalty = recommendedPenalty,
+                                details = details.trim(),
+                                complaintFormUris = finalComplaintUris,
+                                employeeIrPhotoUris = finalIrUris,
+                                rtwFusionFormUris = finalRtwUris,
+                                status = status,
+                                validity = validity
+                            )
+                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                onSave(updated)
+                            }
+                        }
                     }
                 }
             ) {
