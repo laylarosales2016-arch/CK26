@@ -14,11 +14,13 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.content.Context
 import android.util.Log
 import kotlinx.serialization.json.*
 
 class SupabaseSyncManager(
-    private val repository: AttendanceRepository
+    private val repository: AttendanceRepository,
+    private val context: Context
 ) {
     private val client = SupabaseModule.client
     private val json = Json { 
@@ -1016,17 +1018,50 @@ class SupabaseSyncManager(
                     val validity = try { com.example.cod.model.ReportValidity.valueOf(valStr) } catch (e: Exception) { com.example.cod.model.ReportValidity.VALID }
                     val ts = obj["timestamp"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
 
-                    val complaintFormUris = try {
+                    val rawComplaintUris = try {
                         obj["complaint_form_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
                     } catch (e: Exception) { emptyList() }
 
-                    val employeeIrPhotoUris = try {
+                    val rawEmployeeIrUris = try {
                         obj["employee_ir_photo_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
                     } catch (e: Exception) { emptyList() }
 
-                    val rtwFusionFormUris = try {
+                    val rawRtwUris = try {
                         obj["rtw_fusion_form_uris"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
                     } catch (e: Exception) { emptyList() }
+
+                    val complaintFormUris = rawComplaintUris.map { uriStr ->
+                        val local = com.example.cod.util.PhotoStorageUtil.resolveLocalPhotoUri(context, uriStr)
+                        if (local != null && local.startsWith("file://")) {
+                            local
+                        } else if (uriStr.startsWith("http://") || uriStr.startsWith("https://")) {
+                            com.sam.myapplication.util.GoogleDriveSyncManager.downloadPhotoFromGoogleDrive(context, uriStr) ?: uriStr
+                        } else {
+                            uriStr
+                        }
+                    }
+
+                    val employeeIrPhotoUris = rawEmployeeIrUris.map { uriStr ->
+                        val local = com.example.cod.util.PhotoStorageUtil.resolveLocalPhotoUri(context, uriStr)
+                        if (local != null && local.startsWith("file://")) {
+                            local
+                        } else if (uriStr.startsWith("http://") || uriStr.startsWith("https://")) {
+                            com.sam.myapplication.util.GoogleDriveSyncManager.downloadPhotoFromGoogleDrive(context, uriStr) ?: uriStr
+                        } else {
+                            uriStr
+                        }
+                    }
+
+                    val rtwFusionFormUris = rawRtwUris.map { uriStr ->
+                        val local = com.example.cod.util.PhotoStorageUtil.resolveLocalPhotoUri(context, uriStr)
+                        if (local != null && local.startsWith("file://")) {
+                            local
+                        } else if (uriStr.startsWith("http://") || uriStr.startsWith("https://")) {
+                            com.sam.myapplication.util.GoogleDriveSyncManager.downloadPhotoFromGoogleDrive(context, uriStr) ?: uriStr
+                        } else {
+                            uriStr
+                        }
+                    }
 
                     com.example.cod.model.IncidentReport(
                         id = id,

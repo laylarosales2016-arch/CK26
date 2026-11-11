@@ -38,7 +38,7 @@ class MainActivity : FragmentActivity() {
         ) 
     }
     private val authService by lazy { GoogleAuthService(applicationContext) }
-    private val supabaseSync by lazy { SupabaseSyncManager(repository) }
+    private val supabaseSync by lazy { SupabaseSyncManager(repository, applicationContext) }
     private val supabaseStorage by lazy { SupabaseStorageSyncManager(repository, applicationContext) }
     private val viewModel: AttendanceViewModel by viewModels {
         AttendanceViewModel.Factory(repository, authService, supabaseSync, supabaseStorage, applicationContext)

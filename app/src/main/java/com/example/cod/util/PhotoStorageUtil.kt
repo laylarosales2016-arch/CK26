@@ -52,12 +52,15 @@ object PhotoStorageUtil {
     fun loadThumbnailBitmap(context: Context, uriString: String, targetSize: Int = 300): Bitmap? {
         if (uriString.isBlank()) return null
         return try {
-            val uri = Uri.parse(uriString)
+            val resolvedStr = resolveLocalPhotoUri(context, uriString) ?: uriString
+            val uri = Uri.parse(resolvedStr)
 
             val openStream: () -> InputStream? = {
                 if (uri.scheme == "file") {
                     val file = File(uri.path ?: "")
-                    if (file.exists()) file.inputStream() else null
+                    if (file.exists() && file.length() > 0) file.inputStream() else null
+                } else if (uri.scheme == "http" || uri.scheme == "https") {
+                    java.net.URL(resolvedStr).openStream()
                 } else {
                     context.contentResolver.openInputStream(uri)
                 }
@@ -101,21 +104,32 @@ object PhotoStorageUtil {
 
     fun resolveLocalPhotoUri(context: Context, fileNameOrPath: String?): String? {
         if (fileNameOrPath.isNullOrBlank()) return null
-        if (fileNameOrPath.startsWith("file://") || fileNameOrPath.startsWith("content://")) {
-            val uri = Uri.parse(fileNameOrPath)
-            if (uri.scheme == "file") {
-                val file = File(uri.path ?: "")
-                if (file.exists() && file.length() > 0) return fileNameOrPath
-            } else {
-                return fileNameOrPath
+
+        val pureName = try {
+            val path = Uri.parse(fileNameOrPath).path ?: fileNameOrPath
+            File(path).name
+        } catch (_: Exception) {
+            File(fileNameOrPath).name
+        }
+
+        val photoFile = File(File(context.filesDir, "photos"), pureName)
+        if (photoFile.exists() && photoFile.length() > 0) {
+            return Uri.fromFile(photoFile).toString()
+        }
+
+        val compressedFile = File(File(context.filesDir, "compressed_photos"), pureName)
+        if (compressedFile.exists() && compressedFile.length() > 0) {
+            return Uri.fromFile(compressedFile).toString()
+        }
+
+        if (fileNameOrPath.startsWith("file://") || fileNameOrPath.startsWith("/")) {
+            val pathStr = if (fileNameOrPath.startsWith("file://")) fileNameOrPath.substring(7) else fileNameOrPath
+            val directFile = File(pathStr)
+            if (directFile.exists() && directFile.length() > 0) {
+                return Uri.fromFile(directFile).toString()
             }
         }
 
-        val pureName = File(fileNameOrPath).name
-        val localFile = File(File(context.filesDir, "photos"), pureName)
-        if (localFile.exists() && localFile.length() > 0) {
-            return Uri.fromFile(localFile).toString()
-        }
         return fileNameOrPath
     }
 

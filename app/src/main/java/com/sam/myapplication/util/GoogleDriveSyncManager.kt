@@ -7,6 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.example.cod.util.PhotoStorageUtil
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -75,6 +76,73 @@ object GoogleDriveSyncManager {
                 }
             } catch (e: Exception) {
                 Log.e("GoogleDriveSync", "Failed to upload photo to Google Drive: ${e.message}")
+                null
+            }
+        }
+    }
+
+    /**
+     * Downloads a photo from Google Drive URL into local app storage (filesDir/photos/)
+     * so it's restored and viewable offline.
+     */
+    suspend fun downloadPhotoFromGoogleDrive(context: Context, photoUrlOrName: String): String? {
+        if (photoUrlOrName.isBlank()) return null
+        return withContext(Dispatchers.IO) {
+            try {
+                // If it's already a working local file, return it
+                val existingLocal = PhotoStorageUtil.resolveLocalPhotoUri(context, photoUrlOrName)
+                if (existingLocal != null && existingLocal.startsWith("file://")) {
+                    val path = Uri.parse(existingLocal).path
+                    if (path != null && File(path).exists() && File(path).length() > 0) {
+                        return@withContext existingLocal
+                    }
+                }
+
+                if (!photoUrlOrName.startsWith("http://") && !photoUrlOrName.startsWith("https://")) {
+                    return@withContext photoUrlOrName
+                }
+
+                var downloadUrl = photoUrlOrName
+                if (photoUrlOrName.contains("drive.google.com/file/d/")) {
+                    val fileId = photoUrlOrName.substringAfter("file/d/").substringBefore("/")
+                    downloadUrl = "https://drive.google.com/uc?export=download&id=$fileId"
+                }
+
+                Log.d("GoogleDriveSync", "Downloading photo from Drive URL: $downloadUrl")
+
+                val url = URL(downloadUrl)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = true
+                    connectTimeout = 15000
+                    readTimeout = 15000
+                }
+
+                val bytes = conn.inputStream.use { it.readBytes() }
+                if (bytes.isEmpty()) return@withContext null
+
+                val photosDir = File(context.filesDir, "photos")
+                if (!photosDir.exists()) photosDir.mkdirs()
+
+                val pureFileName = try {
+                    File(Uri.parse(photoUrlOrName).path ?: "").name
+                } catch (e: Exception) { "" }
+
+                val fileName = if (pureFileName.isNotBlank() && pureFileName.contains(".")) {
+                    pureFileName
+                } else {
+                    "cod_drive_restored_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg"
+                }
+
+                val destFile = File(photosDir, fileName)
+                java.io.FileOutputStream(destFile).use { fos ->
+                    fos.write(bytes)
+                }
+
+                val localFileUri = Uri.fromFile(destFile).toString()
+                Log.d("GoogleDriveSync", "Successfully downloaded photo from Drive to: $localFileUri")
+                localFileUri
+            } catch (e: Exception) {
+                Log.e("GoogleDriveSync", "Failed to download photo from Google Drive: ${e.message}")
                 null
             }
         }

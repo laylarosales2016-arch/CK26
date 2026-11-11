@@ -983,10 +983,24 @@ object CODRepository {
     private var appContext: android.content.Context? = null
 
     fun setAllData(reports: List<IncidentReport>, employees: List<Employee>) {
-        _reportsFlow.value = reports
+        val currentReports = _reportsFlow.value
+        val mergedReports = reports.map { newRep ->
+            val existing = currentReports.find { it.id == newRep.id }
+            if (existing != null) {
+                newRep.copy(
+                    complaintFormUris = if (newRep.complaintFormUris.isNotEmpty()) newRep.complaintFormUris else existing.complaintFormUris,
+                    employeeIrPhotoUris = if (newRep.employeeIrPhotoUris.isNotEmpty()) newRep.employeeIrPhotoUris else existing.employeeIrPhotoUris,
+                    rtwFusionFormUris = if (newRep.rtwFusionFormUris.isNotEmpty()) newRep.rtwFusionFormUris else existing.rtwFusionFormUris
+                )
+            } else {
+                newRep
+            }
+        }
+        _reportsFlow.value = mergedReports
         if (employees.isNotEmpty()) {
             _employeesFlow.value = employees
         }
+        saveDataToDisk()
     }
 
     fun initPersistence(context: android.content.Context) {

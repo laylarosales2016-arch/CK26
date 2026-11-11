@@ -31,7 +31,7 @@ class SyncWorker(
                 database.scheduleDao(),
                 database.appraisalDao()
             )
-            val supabaseSync = SupabaseSyncManager(repository)
+            val supabaseSync = SupabaseSyncManager(repository, applicationContext)
             
             supabaseSync.uploadEmployeeData(employeeId)
             
