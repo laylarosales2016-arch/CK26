@@ -585,45 +585,55 @@ fun NewReportScreen(
                     } else {
                         errorMessage = null
                         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val initialComplaintUris = complaintFormUris.toList()
+                        val initialIrUris = employeeIrPhotoUris.toList()
+                        val initialRtwUris = rtwFusionFormUris.toList()
+
+                        val newReport = IncidentReport(
+                            id = "REP-${System.currentTimeMillis().toString().takeLast(6)}",
+                            title = title.trim(),
+                            offenderName = involvedEmployees.joinToString(", "),
+                            offenderNames = involvedEmployees.toList(),
+                            incidentSource = selectedSource,
+                            date = currentDate,
+                            incidentDate = incidentDate.trim(),
+                            incidentTime = incidentTime.trim(),
+                            ruleId = selectedRule?.id,
+                            ruleDescription = selectedRule?.description ?: "None (No Rule Violation Selected)",
+                            category = selectedRule?.category,
+                            offenseCount = if (selectedRule != null) selectedOffenseCount else "None",
+                            recommendedPenalty = recommendedPenalty,
+                            details = details.trim(),
+                            complaintFormUris = initialComplaintUris,
+                            employeeIrPhotoUris = initialIrUris,
+                            rtwFusionFormUris = initialRtwUris,
+                            status = ReportStatus.PENDING,
+                            validity = selectedValidity
+                        )
+                        CODRepository.addReport(newReport, context)
+                        showSuccessDialog = true
 
                         scope.launch(Dispatchers.IO) {
-                            val finalComplaintUris = complaintFormUris.mapIndexed { idx, uri ->
+                            val finalComplaintUris = initialComplaintUris.mapIndexed { idx, uri ->
                                 val fileName = buildDriveFileName("ComplaintForm_$idx")
                                 com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
                             }
-                            val finalIrUris = employeeIrPhotoUris.mapIndexed { idx, uri ->
+                            val finalIrUris = initialIrUris.mapIndexed { idx, uri ->
                                 val fileName = buildDriveFileName("EmployeeIR_$idx")
                                 com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
                             }
-                            val finalRtwUris = rtwFusionFormUris.mapIndexed { idx, uri ->
+                            val finalRtwUris = initialRtwUris.mapIndexed { idx, uri ->
                                 val fileName = buildDriveFileName("RTWFusion_$idx")
                                 com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
                             }
 
-                            val newReport = IncidentReport(
-                                id = "REP-${System.currentTimeMillis().toString().takeLast(6)}",
-                                title = title.trim(),
-                                offenderName = involvedEmployees.joinToString(", "),
-                                offenderNames = involvedEmployees.toList(),
-                                incidentSource = selectedSource,
-                                date = currentDate,
-                                incidentDate = incidentDate.trim(),
-                                incidentTime = incidentTime.trim(),
-                                ruleId = selectedRule?.id,
-                                ruleDescription = selectedRule?.description ?: "None (No Rule Violation Selected)",
-                                category = selectedRule?.category,
-                                offenseCount = if (selectedRule != null) selectedOffenseCount else "None",
-                                recommendedPenalty = recommendedPenalty,
-                                details = details.trim(),
+                            val updatedWithDrive = newReport.copy(
                                 complaintFormUris = finalComplaintUris,
                                 employeeIrPhotoUris = finalIrUris,
-                                rtwFusionFormUris = finalRtwUris,
-                                status = ReportStatus.PENDING,
-                                validity = selectedValidity
+                                rtwFusionFormUris = finalRtwUris
                             )
                             withContext(Dispatchers.Main) {
-                                CODRepository.addReport(newReport, context)
-                                showSuccessDialog = true
+                                CODRepository.updateReport(updatedWithDrive, context)
                             }
                         }
                     }

@@ -10,12 +10,32 @@ import org.json.JSONObject
 import com.example.cod.util.PhotoStorageUtil
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+data class DriveUploadState(
+    val fileName: String,
+    val isUploading: Boolean,
+    val isComplete: Boolean,
+    val isError: Boolean = false,
+    val message: String = ""
+)
+
 object GoogleDriveSyncManager {
+
+    private val _uploadState = MutableStateFlow<DriveUploadState?>(null)
+    val uploadState: StateFlow<DriveUploadState?> = _uploadState.asStateFlow()
+
+    fun clearUploadState() {
+        _uploadState.value = null
+    }
 
     // Configurable Google Apps Script Web App URL or Endpoint
     var googleDriveScriptUrl: String = "https://script.google.com/macros/s/AKfycbzoEbyxztmRyt6MHjgXXcmAd9K3jzEogFF90FYi4O50NxPghdWpCZYVzSDCvWbg4Kgy5g/exec"
@@ -26,15 +46,19 @@ object GoogleDriveSyncManager {
      */
     suspend fun uploadPhotoToGoogleDrive(context: Context, photoUri: Uri, customFileName: String? = null): String? {
         return withContext(Dispatchers.IO) {
+            val rawFileName = customFileName ?: "photo_${System.currentTimeMillis()}.jpg"
+            val fileName = rawFileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+
+            _uploadState.value = DriveUploadState(fileName, isUploading = true, isComplete = false)
+
             try {
-                // 1. Compress image to ~200KB crystal-clear JPEG (max 1280px, 80% quality)
-                val compressedFile = PhotoCompressionUtil.compressImage(context, photoUri) ?: return@withContext null
+                val compressedFile = PhotoCompressionUtil.compressImage(context, photoUri) ?: run {
+                    _uploadState.value = DriveUploadState(fileName, isUploading = false, isComplete = false, isError = true, message = "Compression failed")
+                    return@withContext null
+                }
                 val bytes = compressedFile.readBytes()
                 val base64Data = Base64.encodeToString(bytes, Base64.NO_WRAP)
 
-                val fileName = customFileName ?: compressedFile.name
-
-                // 2. Prepare JSON payload
                 val payload = JSONObject().apply {
                     put("filename", fileName)
                     put("mimeType", "image/jpeg")
@@ -42,9 +66,9 @@ object GoogleDriveSyncManager {
                     put("folderName", "Chowking_Photos_Backup")
                 }
 
-                // 3. Post to Google Drive Web App endpoint
                 if (googleDriveScriptUrl.isBlank() || googleDriveScriptUrl.contains("chowking_drive_backup")) {
                     Log.w("GoogleDriveSync", "Google Drive script URL not set yet. Saving file locally.")
+                    _uploadState.value = DriveUploadState(fileName, isUploading = false, isComplete = false, isError = true, message = "Script URL not set")
                     return@withContext Uri.fromFile(compressedFile).toString()
                 }
 
@@ -69,13 +93,17 @@ object GoogleDriveSyncManager {
                     val jsonResp = JSONObject(responseStr)
                     val driveUrl = jsonResp.optString("fileUrl", jsonResp.optString("url", ""))
                     Log.d("GoogleDriveSync", "Photo successfully uploaded to Google Drive: $driveUrl")
-                    if (driveUrl.isNotBlank()) convertToDirectDriveUrl(driveUrl) else Uri.fromFile(compressedFile).toString()
+                    val finalUrl = if (driveUrl.isNotBlank()) convertToDirectDriveUrl(driveUrl) else Uri.fromFile(compressedFile).toString()
+                    _uploadState.value = DriveUploadState(fileName, isUploading = false, isComplete = true, message = "Upload complete")
+                    finalUrl
                 } else {
                     Log.e("GoogleDriveSync", "Google Drive Upload HTTP Error: $responseCode")
+                    _uploadState.value = DriveUploadState(fileName, isUploading = false, isComplete = false, isError = true, message = "HTTP $responseCode")
                     Uri.fromFile(compressedFile).toString()
                 }
             } catch (e: Exception) {
                 Log.e("GoogleDriveSync", "Failed to upload photo to Google Drive: ${e.message}")
+                _uploadState.value = DriveUploadState(fileName, isUploading = false, isComplete = false, isError = true, message = e.message ?: "Upload failed")
                 null
             }
         }
@@ -83,13 +111,19 @@ object GoogleDriveSyncManager {
 
     fun convertToDirectDriveUrl(url: String): String {
         if (url.isBlank()) return url
+        var fileId: String? = null
         if (url.contains("drive.google.com/file/d/")) {
-            val fileId = url.substringAfter("file/d/").substringBefore("/")
-            return "https://drive.google.com/uc?export=download&id=$fileId"
+            fileId = url.substringAfter("file/d/").substringBefore("/").substringBefore("?")
+        } else if (url.contains("drive.google.com/uc?") || url.contains("id=")) {
+            fileId = url.substringAfter("id=").substringBefore("&")
+        } else if (url.contains("drive.google.com/open?id=")) {
+            fileId = url.substringAfter("open?id=").substringBefore("&")
+        } else if (url.contains("lh3.googleusercontent.com/d/")) {
+            fileId = url.substringAfter("lh3.googleusercontent.com/d/").substringBefore("?")
         }
-        if (url.contains("drive.google.com/open?id=")) {
-            val fileId = url.substringAfter("open?id=").substringBefore("&")
-            return "https://drive.google.com/uc?export=download&id=$fileId"
+
+        if (!fileId.isNullOrBlank()) {
+            return "https://lh3.googleusercontent.com/d/$fileId"
         }
         return url
     }
@@ -101,7 +135,7 @@ object GoogleDriveSyncManager {
     ): String {
         if (photoUriStr.isBlank()) return photoUriStr
 
-        if (photoUriStr.contains("drive.google.com") || photoUriStr.startsWith("http://") || photoUriStr.startsWith("https://")) {
+        if (photoUriStr.contains("drive.google.com") || photoUriStr.contains("lh3.googleusercontent.com") || photoUriStr.startsWith("http://") || photoUriStr.startsWith("https://")) {
             Log.d("GoogleDriveSync", "Photo already uploaded to Google Drive. Skipping duplicate upload: $photoUriStr")
             return convertToDirectDriveUrl(photoUriStr)
         }
@@ -121,59 +155,82 @@ object GoogleDriveSyncManager {
     }
 
     /**
-     * Downloads a photo from Google Drive URL into local app storage (filesDir/photos/)
+     * Downloads a photo from Google Drive URL or Filename into local app storage (filesDir/photos/)
      * so it's restored and viewable offline.
      */
     suspend fun downloadPhotoFromGoogleDrive(context: Context, photoUrlOrName: String): String? {
         if (photoUrlOrName.isBlank()) return null
         return withContext(Dispatchers.IO) {
             try {
-                // If it's already a working local file, return it
-                val existingLocal = PhotoStorageUtil.resolveLocalPhotoUri(context, photoUrlOrName)
-                if (existingLocal != null && existingLocal.startsWith("file://")) {
-                    val path = Uri.parse(existingLocal).path
-                    if (path != null && File(path).exists() && File(path).length() > 0) {
-                        return@withContext existingLocal
+                val pureFileName = try {
+                    val path = Uri.parse(photoUrlOrName).path ?: photoUrlOrName
+                    File(path).name
+                } catch (e: Exception) {
+                    File(photoUrlOrName).name
+                }
+
+                // 1. Check if photo already exists locally on disk
+                val photosDir = File(context.filesDir, "photos")
+                val localFile = File(photosDir, pureFileName)
+                if (localFile.exists() && localFile.length() > 0) {
+                    return@withContext Uri.fromFile(localFile).toString()
+                }
+
+                var bytes: ByteArray? = null
+
+                // 2. Download by Direct URL if it's an HTTP/HTTPS link
+                if (photoUrlOrName.startsWith("http://") || photoUrlOrName.startsWith("https://")) {
+                    val downloadUrl = convertToDirectDriveUrl(photoUrlOrName)
+                    Log.d("GoogleDriveSync", "Downloading photo from Drive URL: $downloadUrl")
+                    val url = URL(downloadUrl)
+                    val conn = (url.openConnection() as HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 15000
+                        readTimeout = 15000
+                    }
+                    bytes = conn.inputStream.use { it.readBytes() }
+                }
+
+                // 3. Fallback: Query Google Apps Script Web App to search Google Drive by filename
+                if ((bytes == null || bytes.isEmpty()) && googleDriveScriptUrl.isNotBlank() && pureFileName.isNotBlank()) {
+                    Log.d("GoogleDriveSync", "Searching Google Drive by filename: $pureFileName")
+                    val payload = JSONObject().apply {
+                        put("action", "download")
+                        put("filename", pureFileName)
+                    }
+                    val url = URL(googleDriveScriptUrl)
+                    val conn = (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        doOutput = true
+                        doInput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        connectTimeout = 15000
+                        readTimeout = 15000
+                    }
+                    OutputStreamWriter(conn.outputStream).use { writer ->
+                        writer.write(payload.toString())
+                        writer.flush()
+                    }
+                    if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                        val responseStr = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                        val jsonResp = JSONObject(responseStr)
+                        if (jsonResp.optString("status") == "SUCCESS") {
+                            val base64Str = jsonResp.optString("base64Data", "")
+                            if (base64Str.isNotBlank()) {
+                                bytes = Base64.decode(base64Str, Base64.NO_WRAP)
+                            }
+                        }
                     }
                 }
 
-                if (!photoUrlOrName.startsWith("http://") && !photoUrlOrName.startsWith("https://")) {
-                    return@withContext photoUrlOrName
+                if (bytes == null || bytes.isEmpty()) {
+                    Log.e("GoogleDriveSync", "Photo not found in Google Drive: $pureFileName")
+                    return@withContext null
                 }
 
-                var downloadUrl = photoUrlOrName
-                if (photoUrlOrName.contains("drive.google.com/file/d/")) {
-                    val fileId = photoUrlOrName.substringAfter("file/d/").substringBefore("/")
-                    downloadUrl = "https://drive.google.com/uc?export=download&id=$fileId"
-                }
-
-                Log.d("GoogleDriveSync", "Downloading photo from Drive URL: $downloadUrl")
-
-                val url = URL(downloadUrl)
-                val conn = (url.openConnection() as HttpURLConnection).apply {
-                    instanceFollowRedirects = true
-                    connectTimeout = 15000
-                    readTimeout = 15000
-                }
-
-                val bytes = conn.inputStream.use { it.readBytes() }
-                if (bytes.isEmpty()) return@withContext null
-
-                val photosDir = File(context.filesDir, "photos")
                 if (!photosDir.exists()) photosDir.mkdirs()
-
-                val pureFileName = try {
-                    File(Uri.parse(photoUrlOrName).path ?: "").name
-                } catch (e: Exception) { "" }
-
-                val fileName = if (pureFileName.isNotBlank() && pureFileName.contains(".")) {
-                    pureFileName
-                } else {
-                    "cod_drive_restored_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg"
-                }
-
-                val destFile = File(photosDir, fileName)
-                java.io.FileOutputStream(destFile).use { fos ->
+                val destFile = File(photosDir, pureFileName)
+                FileOutputStream(destFile).use { fos ->
                     fos.write(bytes)
                 }
 

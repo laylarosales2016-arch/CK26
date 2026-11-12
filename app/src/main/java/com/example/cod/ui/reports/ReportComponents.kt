@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.cod.util.PhotoStorageUtil
@@ -416,6 +419,94 @@ fun FullPhotoPreviewDialog(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Unable to load full resolution photo", color = Color.White)
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DriveUploadNotificationBanner() {
+    val uploadState by com.sam.myapplication.util.GoogleDriveSyncManager.uploadState.collectAsState()
+
+    LaunchedEffect(uploadState?.isComplete, uploadState?.isError) {
+        if (uploadState?.isComplete == true || uploadState?.isError == true) {
+            kotlinx.coroutines.delay(4000)
+            com.sam.myapplication.util.GoogleDriveSyncManager.clearUploadState()
+        }
+    }
+
+    androidx.compose.animation.AnimatedVisibility(
+        visible = uploadState != null,
+        enter = androidx.compose.animation.slideInVertically() + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.slideOutVertically() + androidx.compose.animation.fadeOut()
+    ) {
+        uploadState?.let { state ->
+            Surface(
+                color = when {
+                    state.isError -> MaterialTheme.colorScheme.errorContainer
+                    state.isComplete -> Color(0xFFE8F5E9)
+                    else -> MaterialTheme.colorScheme.primaryContainer
+                },
+                contentColor = when {
+                    state.isError -> MaterialTheme.colorScheme.onErrorContainer
+                    state.isComplete -> Color(0xFF2E7D32)
+                    else -> MaterialTheme.colorScheme.onPrimaryContainer
+                },
+                shape = RoundedCornerShape(12.dp),
+                shadowElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (state.isUploading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        } else {
+                            Text(
+                                text = if (state.isComplete) "✅ " else "⚠️ ",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = if (state.isUploading) "☁️ Uploading to Google Drive..." else if (state.isComplete) "Google Drive Upload Complete!" else "Google Drive Sync Warning",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = state.fileName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { com.sam.myapplication.util.GoogleDriveSyncManager.clearUploadState() },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }

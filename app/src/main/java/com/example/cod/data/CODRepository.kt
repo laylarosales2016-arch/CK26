@@ -1005,10 +1005,36 @@ object CODRepository {
 
     fun initPersistence(context: android.content.Context) {
         appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val dataFile = java.io.File(context.filesDir, "cod_app_data.json")
+                if (dataFile.exists() && dataFile.length() > 0) {
+                    val jsonStr = dataFile.readText(Charsets.UTF_8)
+                    com.example.cod.util.BackupManager.restoreBackupFromJson(context, jsonStr)
+                    android.util.Log.d("CODRepository", "Successfully restored COD data from disk")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("CODRepository", "Failed to load COD data from disk: ${e.message}")
+            }
+        }
     }
 
     fun saveDataToDisk(context: android.content.Context? = null) {
         val targetContext = context ?: appContext
+        if (targetContext != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val dataFile = java.io.File(targetContext.filesDir, "cod_app_data.json")
+                    val jsonPayload = com.example.cod.util.BackupManager.createBackupJson(targetContext)
+                    java.io.FileOutputStream(dataFile).use { output ->
+                        output.write(jsonPayload.toByteArray(Charsets.UTF_8))
+                    }
+                    android.util.Log.d("CODRepository", "Successfully saved COD data to disk")
+                } catch (e: Exception) {
+                    android.util.Log.e("CODRepository", "Failed to save COD data to disk: ${e.message}")
+                }
+            }
+        }
     }
 
     var onReportSavedListener: ((IncidentReport) -> Unit)? = null

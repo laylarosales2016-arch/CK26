@@ -52,7 +52,26 @@ object PhotoStorageUtil {
     fun loadThumbnailBitmap(context: Context, uriString: String, targetSize: Int = 300): Bitmap? {
         if (uriString.isBlank()) return null
         return try {
-            val resolvedStr = resolveLocalPhotoUri(context, uriString) ?: uriString
+            var resolvedStr = resolveLocalPhotoUri(context, uriString) ?: uriString
+
+            val isFile = resolvedStr.startsWith("file://") || resolvedStr.startsWith("/")
+            val existsLocally = if (isFile) {
+                val path = if (resolvedStr.startsWith("file://")) resolvedStr.substring(7) else resolvedStr
+                val f = File(path)
+                f.exists() && f.length() > 0
+            } else false
+
+            if (!existsLocally && !resolvedStr.startsWith("content://")) {
+                val downloaded = try {
+                    kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                        com.sam.myapplication.util.GoogleDriveSyncManager.downloadPhotoFromGoogleDrive(context, uriString)
+                    }
+                } catch (_: Exception) { null }
+                if (!downloaded.isNullOrBlank()) {
+                    resolvedStr = downloaded
+                }
+            }
+
             val uri = Uri.parse(resolvedStr)
 
             val openStream: () -> InputStream? = {

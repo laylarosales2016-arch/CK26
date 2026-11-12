@@ -76,11 +76,16 @@ fun CODMainScreen(
                 .padding(innerPadding),
             color = MaterialTheme.colorScheme.background
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.TopCenter
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                when (selectedTab) {
+                com.example.cod.ui.reports.DriveUploadNotificationBanner()
+
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    when (selectedTab) {
                     NavigationTab.RULEBOOK -> {
                         RulebookScreen(
                             onSelectRuleToReport = { rule ->
@@ -116,6 +121,7 @@ fun CODMainScreen(
             }
         }
     }
+}
 
     if (isWideScreen) {
         Row(modifier = Modifier.fillMaxSize()) {
