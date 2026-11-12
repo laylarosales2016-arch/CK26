@@ -69,30 +69,21 @@ object BackupManager {
 
             val complaintArray = JSONArray()
             for (uri in rep.complaintFormUris) {
-                val base64 = PhotoStorageUtil.photoUriToBase64(context, uri)
-                if (!base64.isNullOrBlank()) {
-                    complaintArray.put(base64)
-                }
+                if (uri.isNotBlank()) complaintArray.put(uri)
             }
-            repObj.put("complaintFormPhotos", complaintArray)
+            repObj.put("complaintFormUris", complaintArray)
 
             val employeeIrArray = JSONArray()
             for (uri in rep.employeeIrPhotoUris) {
-                val base64 = PhotoStorageUtil.photoUriToBase64(context, uri)
-                if (!base64.isNullOrBlank()) {
-                    employeeIrArray.put(base64)
-                }
+                if (uri.isNotBlank()) employeeIrArray.put(uri)
             }
-            repObj.put("employeeIrPhotos", employeeIrArray)
+            repObj.put("employeeIrPhotoUris", employeeIrArray)
 
             val rtwFusionArray = JSONArray()
             for (uri in rep.rtwFusionFormUris) {
-                val base64 = PhotoStorageUtil.photoUriToBase64(context, uri)
-                if (!base64.isNullOrBlank()) {
-                    rtwFusionArray.put(base64)
-                }
+                if (uri.isNotBlank()) rtwFusionArray.put(uri)
             }
-            repObj.put("rtwFusionPhotos", rtwFusionArray)
+            repObj.put("rtwFusionFormUris", rtwFusionArray)
 
             reportsArray.put(repObj)
         }
@@ -235,35 +226,45 @@ object BackupManager {
                     val timestamp = repObj.optLong("timestamp", System.currentTimeMillis())
 
                     val complaintFormUris = mutableListOf<String>()
-                    if (repObj.has("complaintFormPhotos")) {
+                    if (repObj.has("complaintFormUris")) {
+                        val arr = repObj.getJSONArray("complaintFormUris")
+                        for (j in 0 until arr.length()) {
+                            val uriStr = arr.getString(j)
+                            if (uriStr.isNotBlank()) complaintFormUris.add(uriStr)
+                        }
+                    } else if (repObj.has("complaintFormPhotos")) {
                         val arr = repObj.getJSONArray("complaintFormPhotos")
                         for (j in 0 until arr.length()) {
                             val base64 = arr.getString(j)
                             val restoredUri = PhotoStorageUtil.base64ToPhotoUri(context, base64)
                             if (restoredUri != null) complaintFormUris.add(restoredUri)
                         }
-                    } else if (repObj.has("complaintFormBase64")) {
-                        val base64 = repObj.getString("complaintFormBase64")
-                        val restoredUri = PhotoStorageUtil.base64ToPhotoUri(context, base64)
-                        if (restoredUri != null) complaintFormUris.add(restoredUri)
                     }
 
                     val employeeIrPhotoUris = mutableListOf<String>()
-                    if (repObj.has("employeeIrPhotos")) {
+                    if (repObj.has("employeeIrPhotoUris")) {
+                        val arr = repObj.getJSONArray("employeeIrPhotoUris")
+                        for (j in 0 until arr.length()) {
+                            val uriStr = arr.getString(j)
+                            if (uriStr.isNotBlank()) employeeIrPhotoUris.add(uriStr)
+                        }
+                    } else if (repObj.has("employeeIrPhotos")) {
                         val arr = repObj.getJSONArray("employeeIrPhotos")
                         for (j in 0 until arr.length()) {
                             val base64 = arr.getString(j)
                             val restoredUri = PhotoStorageUtil.base64ToPhotoUri(context, base64)
                             if (restoredUri != null) employeeIrPhotoUris.add(restoredUri)
                         }
-                    } else if (repObj.has("employeePhotoBase64")) {
-                        val base64 = repObj.getString("employeePhotoBase64")
-                        val restoredUri = PhotoStorageUtil.base64ToPhotoUri(context, base64)
-                        if (restoredUri != null) employeeIrPhotoUris.add(restoredUri)
                     }
 
                     val rtwFusionFormUris = mutableListOf<String>()
-                    if (repObj.has("rtwFusionPhotos")) {
+                    if (repObj.has("rtwFusionFormUris")) {
+                        val arr = repObj.getJSONArray("rtwFusionFormUris")
+                        for (j in 0 until arr.length()) {
+                            val uriStr = arr.getString(j)
+                            if (uriStr.isNotBlank()) rtwFusionFormUris.add(uriStr)
+                        }
+                    } else if (repObj.has("rtwFusionPhotos")) {
                         val arr = repObj.getJSONArray("rtwFusionPhotos")
                         for (j in 0 until arr.length()) {
                             val base64 = arr.getString(j)
