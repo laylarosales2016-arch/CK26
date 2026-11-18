@@ -421,54 +421,115 @@ fun BackgroundMallIDScraper(
     val isScraping by viewModel.isScrapingMallId.collectAsState()
     if (!isScraping || !isOnline) return
 
-    val employees by viewModel.allEmployees.collectAsState()
+    val allEmployees by viewModel.allEmployees.collectAsState()
     val selectedIds by viewModel.selectedIdsToScrape.collectAsState()
-    val employeesToScrape = remember(employees, selectedIds) {
-        employees.filter { selectedIds.contains(it.id) }
+
+    val scrapeQueue = remember(isScraping) {
+        if (isScraping) {
+            val set = selectedIds.toSet()
+            allEmployees.filter { set.contains(it.id) && !it.mallIdNo.isNullOrBlank() }
+        } else emptyList()
     }
 
-    if (employeesToScrape.isEmpty()) {
-        LaunchedEffect(Unit) {
-            Toast.makeText(context, "No employees with Mall ID found to scrape.", Toast.LENGTH_SHORT).show()
-            viewModel.stopScrapingMallId()
-        }
-        return
-    }
-
-    var currentIndex by remember { mutableIntStateOf(0) }
-    var retryTrigger by remember { mutableIntStateOf(0) }
-    var currentRetryCount by remember { mutableIntStateOf(0) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(isScraping) {
-        if (isScraping) {
-            Toast.makeText(context, "Auto-Scraping Started: checking ${employeesToScrape.size} IDs", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(currentIndex, isScraping, retryTrigger) {
-        if (isScraping) {
-            if (currentIndex < employeesToScrape.size) {
-                viewModel.setScrapingProgress(currentIndex.toFloat() / employeesToScrape.size)
-                val emp = employeesToScrape[currentIndex]
-                Log.d("Scraper", "Checking employee ${currentIndex + 1}/${employeesToScrape.size}: ${emp.firstName} (MallID: ${emp.mallIdNo}) - Retry: $currentRetryCount")
-                val url = "https://oma.smphi.com/SMTP_Mobile_v2/MallIDDetails?Id=${emp.mallIdNo}"
-                webViewInstance?.loadUrl(url)
-            } else {
-                Toast.makeText(context, "Auto-Scraping Finished! Checked ${employeesToScrape.size} employees.", Toast.LENGTH_LONG).show()
+        if (!isScraping || scrapeQueue.isEmpty()) {
+            if (isScraping && scrapeQueue.isEmpty()) {
+                Toast.makeText(context, "No employees with Mall ID found to scrape.", Toast.LENGTH_SHORT).show()
                 viewModel.stopScrapingMallId()
-                currentIndex = 0
-                retryTrigger = 0
-                currentRetryCount = 0
             }
+            return@LaunchedEffect
         }
+
+        Toast.makeText(context, "Auto-Scraping Started: Queue size ${scrapeQueue.size}", Toast.LENGTH_SHORT).show()
+
+        for (index in scrapeQueue.indices) {
+            if (!viewModel.isScrapingMallId.value) break
+
+            val emp = scrapeQueue[index]
+            viewModel.setScrapingProgress((index + 1).toFloat() / scrapeQueue.size)
+
+            val url = "https://oma.smphi.com/SMTP_Mobile_v2/MallIDDetails?Id=${emp.mallIdNo}"
+            Log.d("Scraper", "Processing [${index + 1}/${scrapeQueue.size}]: ${emp.firstName} (Mall ID: ${emp.mallIdNo})")
+
+            var statusFound: String? = null
+            var attempts = 0
+            val maxAttempts = 3
+
+            while (attempts < maxAttempts && statusFound == null && viewModel.isScrapingMallId.value) {
+                attempts++
+                val deferred = kotlinx.coroutines.CompletableDeferred<String?>()
+
+                withContext(Dispatchers.Main) {
+                    webViewInstance?.loadUrl(url)
+                }
+
+                kotlinx.coroutines.delay(4000)
+
+                withContext(Dispatchers.Main) {
+                    webViewInstance?.evaluateJavascript("""
+                        (function() {
+                            var status = "";
+                            var exprs = document.querySelectorAll('[data-expression]');
+                            for (var j = 0; j < exprs.length; j++) {
+                                var txt = exprs[j].innerText.trim();
+                                var valid = ["Active", "For Renewal", "Printing", "Pick up", "Orientation", "Draft", "Expired", "Cancelled", "Rejected", "For Approval"];
+                                if (valid.some(s => txt.toLowerCase().includes(s.toLowerCase()))) {
+                                    status = txt;
+                                    break;
+                                }
+                            }
+                            if (!status) {
+                                var labels = document.querySelectorAll('label, span');
+                                for(var i=0; i<labels.length; i++) {
+                                    var t = labels[i].innerText.toLowerCase();
+                                    if(t.includes('id status') || t.includes('request status')) {
+                                        var p = labels[i].parentElement;
+                                        status = p.innerText.replace(/.*status/i, '').trim().split('\n')[0];
+                                        if(status) break;
+                                    }
+                                }
+                            }
+                            return status;
+                        })();
+                    """.trimIndent()) { result ->
+                        val clean = result?.trim('"')?.trim()
+                        if (!clean.isNullOrBlank() && clean != "null") {
+                            deferred.complete(clean)
+                        } else {
+                            deferred.complete(null)
+                        }
+                    }
+                }
+
+                statusFound = try {
+                    kotlinx.coroutines.withTimeoutOrNull(3000) { deferred.await() }
+                } catch (e: Exception) { null }
+
+                if (statusFound == null && attempts < maxAttempts) {
+                    Log.d("Scraper", "Retry $attempts/$maxAttempts for ${emp.firstName}...")
+                    kotlinx.coroutines.delay(2000)
+                }
+            }
+
+            if (!statusFound.isNullOrBlank()) {
+                viewModel.updateMallIdStatus(emp.id, statusFound)
+                Toast.makeText(context, "✅ [${index + 1}/${scrapeQueue.size}] ${emp.firstName}: $statusFound", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "⚠️ [${index + 1}/${scrapeQueue.size}] ${emp.firstName}: Could not read status", Toast.LENGTH_SHORT).show()
+            }
+
+            kotlinx.coroutines.delay(2000)
+        }
+
+        Toast.makeText(context, "🎉 Auto-Scraping Finished! Processed all ${scrapeQueue.size} employees.", Toast.LENGTH_LONG).show()
+        viewModel.stopScrapingMallId()
     }
 
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
-                // Some devices need a non-zero size to load correctly
                 layoutParams = ViewGroup.LayoutParams(1, 1)
                 webViewInstance = this
                 settings.apply {
@@ -477,14 +538,13 @@ fun BackgroundMallIDScraper(
                     databaseEnabled = true
                     userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 }
-                
+
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         val portalUser = viewModel.getPortalUsername()
                         val portalPass = viewModel.getPortalPassword()
 
                         if (url?.contains("Login") == true) {
-                            // Try to auto-login if we hit a login page during scraping
                             view?.evaluateJavascript("""
                                 (function() {
                                     var u = document.getElementById('Input_UsernameVal') || document.querySelector('input[id*="User"]');
@@ -499,66 +559,6 @@ fun BackgroundMallIDScraper(
                                     }
                                 })();
                             """.trimIndent(), null)
-                            return
-                        }
-
-                        if (url?.contains("MallIDDetails") == true) {
-                            scope.launch {
-                                // Wait for dynamic content
-                                delay(8000) 
-                                view?.evaluateJavascript("""
-                                    (function() {
-                                        var status = "";
-                                        
-                                        // 1. Check specific OutSystems expressions
-                                        var exprs = document.querySelectorAll('[data-expression]');
-                                        for (var j = 0; j < exprs.length; j++) {
-                                            var txt = exprs[j].innerText.trim();
-                                            var valid = ["Active", "For Renewal", "Printing", "Pick up", "Orientation", "Draft", "Expired", "Cancelled", "Rejected", "For Approval"];
-                                            if (valid.some(s => txt.toLowerCase().includes(s.toLowerCase()))) {
-                                                status = txt;
-                                                break;
-                                            }
-                                        }
-
-                                        // 2. Fallback: Search by label
-                                        if (!status) {
-                                            var labels = document.querySelectorAll('label, span');
-                                            for(var i=0; i<labels.length; i++) {
-                                                var t = labels[i].innerText.toLowerCase();
-                                                if(t.includes('id status') || t.includes('request status')) {
-                                                    var p = labels[i].parentElement;
-                                                    status = p.innerText.replace(/.*status/i, '').trim().split('\n')[0];
-                                                    if(status) break;
-                                                }
-                                            }
-                                        }
-                                        return status;
-                                    })();
-                                """.trimIndent()) { result ->
-                                    val status = result.trim('"')
-                                    val emp = employeesToScrape.getOrNull(currentIndex) ?: return@evaluateJavascript
-                                    
-                                    scope.launch {
-                                        if (status.isNotBlank() && status != "null") {
-                                            viewModel.updateMallIdStatus(emp.id, status)
-                                            Toast.makeText(context, "Scraped: ${emp.firstName} -> $status", Toast.LENGTH_SHORT).show()
-                                            delay(2000)
-                                            currentRetryCount = 0
-                                            currentIndex++
-                                        } else {
-                                            if (currentRetryCount < 2) {
-                                                currentRetryCount++
-                                                retryTrigger++ 
-                                            } else {
-                                                Toast.makeText(context, "Could not read status for ${emp.firstName}", Toast.LENGTH_SHORT).show()
-                                                currentRetryCount = 0
-                                                currentIndex++
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
