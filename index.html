@@ -2359,11 +2359,6 @@
             }
         }
         idPosHtml += '</div>';
-
-        const pendingDays = parseInt(emp.pending_suspension_days || emp.pendingSuspensionDays || 0);
-        if (pendingDays > 0) {
-            idPosHtml += '<div class="w-full mt-2"><span class="text-[9px] font-black text-rose-300 uppercase tracking-widest bg-rose-500/20 border border-rose-500/40 px-3 py-1 rounded-lg inline-block shadow-md">Pending Suspension No: ' + pendingDays + ' Days</span></div>';
-        }
         document.getElementById('v-id-pos-container').innerHTML = idPosHtml;
 
         document.getElementById('v-fullname').innerText = emp.first_name + " " + (emp.middle_name ? emp.middle_name + ' ' : '') + emp.last_name;
@@ -2486,6 +2481,11 @@
             var absentLevel = parseInt(emp.absent_offence_level || emp.absentOffenceLevel || 0);
             var hamperingLevel = parseInt(emp.hampering_offence_level || emp.hamperingOffenceLevel || 0);
             var customOffences = emp.custom_offences || emp.customOffences || [];
+
+            var pendingDays = parseInt(emp.pending_suspension_days || emp.pendingSuspensionDays || 0);
+            if (pendingDays > 0) {
+                activeHtml += '<div class="flex items-center gap-2 mb-1 text-rose-200 font-bold text-xs"><span class="text-[8px] text-rose-400">▪</span><span>Pending Suspension No: <strong class="text-white font-black bg-black/40 px-1.5 py-0.5 rounded border border-rose-500/30">' + pendingDays + ' Days</strong></span></div>';
+            }
 
             if (lateLevel > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>Lates: ' + lateLevel + getOrdinal(lateLevel) + ' Offence</span></div>';
             if (absentLevel > 0) activeHtml += '<div class="flex items-center gap-2 mb-1"><span class="text-[8px]">▪</span><span>Absent: ' + absentLevel + getOrdinal(absentLevel) + ' Offence</span></div>';
@@ -3221,8 +3221,8 @@
             }
         } else {
             document.getElementById('btn-back-vault').classList.add('hidden');
-            document.getElementById('stats-container').classList.remove('hidden'); document.getElementById('nav-controls').classList.remove('hidden'); document.getElementById('admin-controls').classList.remove('hidden');
-            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.remove('hidden'));
+            document.getElementById('stats-container').classList.add('hidden'); document.getElementById('nav-controls').classList.remove('hidden'); document.getElementById('admin-controls').classList.remove('hidden');
+            [statCards.present, statCards.late, statCards.absent, statCards.da].forEach(c => c.classList.add('hidden'));
             const tabs = ['attendance', 'employees', 'da', 'reports', 'attrition', 'medals', 'scheduler', 'chat', 'announcements', 'permits'];
             tabs.forEach(t => { const b = document.getElementById('btn-' + t); if (b) b.classList.remove('hidden'); });
             const sysBtn = document.getElementById('btn-system'); if (portalRole === 'superadmin') sysBtn.classList.remove('hidden'); else sysBtn.classList.add('hidden');
@@ -3820,25 +3820,6 @@
         const probaCount = dataToRender.filter(e => e.date_hired && new Date(e.date_hired) > sixMonthsAgo && e.position !== 'Excrew').length;
 
         let html = `
-        <div class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="bg-space-950/60 p-3.5 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0"><i class="fa-solid fa-users text-sm"></i></div>
-                <div><p class="text-[8px] font-black text-space-400 uppercase tracking-widest">Total Personnel</p><p class="text-base font-black text-white">${totalCount}</p></div>
-            </div>
-            <div class="bg-space-950/60 p-3.5 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0"><i class="fa-solid fa-circle-check text-sm"></i></div>
-                <div><p class="text-[8px] font-black text-space-400 uppercase tracking-widest">Certified Crew</p><p class="text-base font-black text-emerald-400">${certCountTotal}</p></div>
-            </div>
-            <div class="bg-space-950/60 p-3.5 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0"><i class="fa-solid fa-award text-sm"></i></div>
-                <div><p class="text-[8px] font-black text-space-400 uppercase tracking-widest">Regular Status</p><p class="text-base font-black text-amber-400">${regularCount}</p></div>
-            </div>
-            <div class="bg-space-950/60 p-3.5 rounded-2xl border border-white/5 backdrop-blur-md flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center text-slate-300 shrink-0"><i class="fa-solid fa-user-clock text-sm"></i></div>
-                <div><p class="text-[8px] font-black text-space-400 uppercase tracking-widest">Probationary</p><p class="text-base font-black text-slate-300">${probaCount}</p></div>
-            </div>
-        </div>
-
         <div class="flex items-center justify-between mb-2">
             <span class="text-[9px] font-black text-space-400 uppercase tracking-widest">Master Personnel Ledger</span>
             <span class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-expand text-[10px]"></i> Auto-Fit Enabled</span>
