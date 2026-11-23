@@ -349,8 +349,128 @@ fun SchedulerScreen(
     }
 
     if (editingOrderEmployee != null) {
-        var orderText by remember { mutableStateOf(editingOrderEmployee?.schedulerOrder?.toString() ?: "0") }
-        AlertDialog(onDismissRequest = { editingOrderEmployee = null }, title = { Text("Change Rank / Order") }, text = { OutlinedTextField(value = orderText, onValueChange = { orderText = it }, label = { Text("Order Number") }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)) }, confirmButton = { TextButton(onClick = { val order = orderText.toIntOrNull() ?: 0; val mondayDate = weekDates[0].toString(); viewModel.saveSchedule(EmployeeSchedule(editingOrderEmployee!!.id, mondayDate, schedulerOrder = order)); editingOrderEmployee = null }) { Text("Save") } }, dismissButton = { TextButton(onClick = { editingOrderEmployee = null }) { Text("Cancel") } })
+        val targetEmp = editingOrderEmployee!!
+        val mondayDate = weekDates[0].toString()
+        val mondaySched = allSchedules.find { it.employeeId == targetEmp.id && it.date == mondayDate }
+        val currentSchedulerPos = mondaySched?.position ?: targetEmp.schedulerPosition ?: targetEmp.position ?: "Crew"
+        val currentOrder = mondaySched?.schedulerOrder ?: targetEmp.schedulerOrder ?: 0
+
+        var selectedStation by remember { mutableStateOf(currentSchedulerPos) }
+        var orderText by remember { mutableStateOf(currentOrder.toString()) }
+        var showStationDropdown by remember { mutableStateOf(false) }
+
+        val availableStations = listOf(
+            "Dine In", "CIC", "DJ", "Dispatch", "Cashier", "SS", "SC",
+            "SO", "Regular", "Assembler", "Fryman", "Noodles", "Backup"
+        )
+
+        AlertDialog(
+            onDismissRequest = { editingOrderEmployee = null },
+            title = {
+                Column {
+                    Text("Edit Scheduler Station & Rank", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "${targetEmp.firstName ?: ""} ${targetEmp.lastName ?: ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "🔒 Masterlist Station: ${targetEmp.position ?: "Crew"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "(Masterlist station stays untouched on the front page)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = selectedStation,
+                            onValueChange = { selectedStation = it },
+                            label = { Text("Scheduler Station") },
+                            trailingIcon = {
+                                IconButton(onClick = { showStationDropdown = true }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Station")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        DropdownMenu(
+                            expanded = showStationDropdown,
+                            onDismissRequest = { showStationDropdown = false },
+                            modifier = Modifier.fillMaxWidth(0.7f)
+                        ) {
+                            availableStations.forEach { station ->
+                                DropdownMenuItem(
+                                    text = { Text(station, fontWeight = if (station.equals(selectedStation, ignoreCase = true)) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        selectedStation = station
+                                        showStationDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = orderText,
+                        onValueChange = { orderText = it },
+                        label = { Text("Rank / Display Order") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val order = orderText.toIntOrNull() ?: 0
+
+                        val existingMonday = allSchedules.find { it.employeeId == targetEmp.id && it.date == mondayDate }
+                        val updatedMonday = (existingMonday ?: EmployeeSchedule(targetEmp.id, mondayDate)).copy(
+                            position = selectedStation.trim(),
+                            schedulerOrder = order
+                        )
+                        viewModel.saveSchedule(updatedMonday)
+
+                        val updatedEmp = targetEmp.copy(
+                            schedulerPosition = selectedStation.trim(),
+                            schedulerOrder = order
+                        )
+                        viewModel.updateEmployee(context, updatedEmp)
+
+                        editingOrderEmployee = null
+                    }
+                ) {
+                    Text("Save Changes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingOrderEmployee = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showExportDatePicker) {

@@ -5025,7 +5025,7 @@ fun EmployeeDetailScreen(
                         
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     // Active Offences Section
-                    if (employee != null && employee.position != "Excrew" && ((employee.lateOffenceLevel ?: 0) > 0 || (employee.absentOffenceLevel ?: 0) > 0 || (employee.hamperingOffenceLevel ?: 0) > 0 || employee.customOffences?.any { it.level > 0 } == true)) {
+                    if (employee != null && employee.position != "Excrew" && ((employee.lateOffenceLevel ?: 0) > 0 || (employee.absentOffenceLevel ?: 0) > 0 || (employee.hamperingOffenceLevel ?: 0) > 0 || (employee.pendingSuspensionDays ?: 0) > 0 || employee.customOffences?.any { it.level > 0 } == true)) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -5038,6 +5038,9 @@ fun EmployeeDetailScreen(
                                     Text("Active Disciplinary Actions", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
+                                if ((employee.pendingSuspensionDays ?: 0) > 0) {
+                                    Text("• Pending Suspension No: ${employee.pendingSuspensionDays} Days", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                                }
                                 if ((employee.lateOffenceLevel ?: 0) > 0) {
                                     Text("• Lates: ${employee.lateOffenceLevel}${getOrdinal(employee.lateOffenceLevel ?: 0)} Offence", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                                 }
@@ -7048,6 +7051,7 @@ fun EditEmployeeScreen(
         var emergencyContactName by remember { mutableStateOf(employee.emergencyContactName ?: "") }
         var emergencyContactRelationship by remember { mutableStateOf(employee.emergencyContactRelationship ?: "") }
         var emergencyContactPhone by remember { mutableStateOf(employee.emergencyContactPhone ?: "") }
+        var pendingSuspensionDays by remember { mutableStateOf(employee.pendingSuspensionDays?.toString() ?: "0") }
 
         val context = LocalContext.current
         val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -7533,6 +7537,16 @@ fun EditEmployeeScreen(
                     Text("Admin Access", fontWeight = FontWeight.Bold)
                 }
 
+                OutlinedTextField(
+                    value = pendingSuspensionDays,
+                    onValueChange = { pendingSuspensionDays = it },
+                    label = { Text("Pending Suspension No. (Days)") },
+                    placeholder = { Text("0") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -7663,6 +7677,7 @@ fun EditEmployeeScreen(
                                     lateOffenceLevel = employee.lateOffenceLevel ?: 0,
                                     absentOffenceLevel = employee.absentOffenceLevel ?: 0,
                                     hamperingOffenceLevel = employee.hamperingOffenceLevel ?: 0,
+                                    pendingSuspensionDays = pendingSuspensionDays.toIntOrNull() ?: 0,
                                     customOffences = employee.customOffences ?: emptyList(),
                                     healthIdExpirationDate = healthIdExpirationDate,
                                     portalUsername = portalUsername,

@@ -54,7 +54,7 @@ fun CODMainScreen(
                     photoUri = emp.profileImageUri
                 )
             }
-            CODRepository.setAllData(CODRepository.reportsFlow.value, codEmps)
+            CODRepository.seedInitialEmployeesIfNeeded(codEmps)
         }
     }
 

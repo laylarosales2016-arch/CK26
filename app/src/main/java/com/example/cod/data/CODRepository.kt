@@ -982,6 +982,20 @@ object CODRepository {
 
     private var appContext: android.content.Context? = null
 
+    private var hasSeededAppEmployees = false
+
+    fun seedInitialEmployeesIfNeeded(appEmployees: List<Employee>) {
+        val current = _employeesFlow.value
+        val isDefaultSamples = current.size <= 5 && current.any { it.id == "EMP-001" || it.id == "EMP-002" }
+        if (!hasSeededAppEmployees && (current.isEmpty() || isDefaultSamples)) {
+            hasSeededAppEmployees = true
+            if (appEmployees.isNotEmpty()) {
+                _employeesFlow.value = appEmployees
+                saveDataToDisk()
+            }
+        }
+    }
+
     fun setAllData(reports: List<IncidentReport>, employees: List<Employee>) {
         val currentReports = _reportsFlow.value
         val mergedReports = reports.map { newRep ->
@@ -997,7 +1011,7 @@ object CODRepository {
             }
         }
         _reportsFlow.value = mergedReports
-        if (employees.isNotEmpty()) {
+        if (_employeesFlow.value.isEmpty() && employees.isNotEmpty()) {
             _employeesFlow.value = employees
         }
         saveDataToDisk()
@@ -1011,6 +1025,7 @@ object CODRepository {
                 if (dataFile.exists() && dataFile.length() > 0) {
                     val jsonStr = dataFile.readText(Charsets.UTF_8)
                     com.example.cod.util.BackupManager.restoreBackupFromJson(context, jsonStr)
+                    hasSeededAppEmployees = true
                     android.util.Log.d("CODRepository", "Successfully restored COD data from disk")
                 }
             } catch (e: Exception) {
@@ -1089,15 +1104,18 @@ object CODRepository {
 
     fun addEmployee(employee: Employee, context: android.content.Context? = null) {
         _employeesFlow.value = listOf(employee) + _employeesFlow.value
+        saveDataToDisk(context)
     }
 
     fun updateEmployee(updatedEmployee: Employee, context: android.content.Context? = null) {
         _employeesFlow.value = _employeesFlow.value.map { emp ->
             if (emp.id == updatedEmployee.id) updatedEmployee else emp
         }
+        saveDataToDisk(context)
     }
 
     fun deleteEmployee(employeeId: String, context: android.content.Context? = null) {
         _employeesFlow.value = _employeesFlow.value.filter { it.id != employeeId }
+        saveDataToDisk(context)
     }
 }

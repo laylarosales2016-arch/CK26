@@ -34,16 +34,39 @@ fun RulebookScreen(
     var showTableOfOffenses by remember { mutableStateOf(false) }
 
     val filteredSections = remember(searchQuery, selectedCategoryFilter) {
+        val trimmedQuery = searchQuery.trim()
+        val tokens = if (trimmedQuery.isBlank()) emptyList() else trimmedQuery.lowercase().split("\\s+".toRegex())
+
         CODRepository.ruleSections.mapNotNull { section ->
             val filteredRules = section.rules.filter { rule ->
                 val matchesCategory = selectedCategoryFilter == null || rule.category == selectedCategoryFilter
-                val matchesSearch = searchQuery.isBlank() ||
-                        rule.description.contains(searchQuery, ignoreCase = true) ||
-                        section.title.contains(searchQuery, ignoreCase = true) ||
-                        rule.category.name.contains(searchQuery, ignoreCase = true)
+
+                val matchesSearch = if (tokens.isEmpty()) {
+                    true
+                } else {
+                    val targetText = buildString {
+                        append("rule ").append(rule.ruleNumber).append(" ")
+                        append(rule.ruleNumber).append(" ")
+                        append(rule.description).append(" ")
+                        append(section.title).append(" ")
+                        append(section.description).append(" ")
+                        append(rule.category.name).append(" ")
+                        append(rule.category.label).append(" ")
+                        append("category ").append(rule.category.name).append(" ")
+                        append("page ").append(rule.pageNumber).append(" ")
+                        append(rule.firstOffense).append(" ")
+                        append(rule.secondOffense).append(" ")
+                        append(rule.thirdOffense).append(" ")
+                        append(rule.fourthOffense).append(" ")
+                        append(rule.fifthOffense).append(" ")
+                    }.lowercase()
+
+                    tokens.all { token -> targetText.contains(token) }
+                }
 
                 matchesCategory && matchesSearch
             }
+
             if (filteredRules.isNotEmpty()) {
                 section.copy(rules = filteredRules)
             } else null
@@ -85,14 +108,53 @@ fun RulebookScreen(
         }
 
         item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search rules, offense descriptions, categories...") },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
-            )
+            val totalMatchedRules = remember(filteredSections) {
+                filteredSections.sumOf { it.rules.size }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search rules, descriptions, keywords, page, penalty...") },
+                    trailingIcon = {
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Text("❌", style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                if (searchQuery.isNotBlank() || selectedCategoryFilter != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Found $totalMatchedRules rule(s) matching filter",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TextButton(
+                            onClick = {
+                                searchQuery = ""
+                                selectedCategoryFilter = null
+                            },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Clear Filters ❌", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
         }
 
         item {

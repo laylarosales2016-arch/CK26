@@ -37,6 +37,7 @@ data class Employee(
     @SerialName("late_offence_level") val lateOffenceLevel: Int? = 0,
     @SerialName("absent_offence_level") val absentOffenceLevel: Int? = 0,
     @SerialName("hampering_offence_level") val hamperingOffenceLevel: Int? = 0,
+    @SerialName("pending_suspension_days") val pendingSuspensionDays: Int? = 0,
     @SerialName("custom_offences") val customOffences: List<CustomOffence>? = emptyList(),
     @SerialName("uniform_cap") val uniformCap: Int? = 0,
     @SerialName("uniform_apron") val uniformApron: Int? = 0,
