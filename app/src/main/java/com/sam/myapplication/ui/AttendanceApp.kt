@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -2478,12 +2479,26 @@ fun EmployeeListScreen(
                                             val color = if (daysToHealthExpiry < 30) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer
                                             Surface(
                                                 color = color,
-                                                shape = MaterialTheme.shapes.extraSmall
+                                                shape = MaterialTheme.shapes.extraSmall,
+                                                modifier = Modifier.padding(bottom = 2.dp)
                                             ) {
                                                 Row(modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                                                     Icon(Icons.Default.HealthAndSafety, null, modifier = Modifier.size(10.dp))
                                                     Spacer(Modifier.width(2.dp))
                                                     Text("$daysToHealthExpiry d", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                        }
+                                        if ((employee.pendingSuspensionDays ?: 0) > 0) {
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.errorContainer,
+                                                shape = MaterialTheme.shapes.extraSmall,
+                                                modifier = Modifier.padding(bottom = 2.dp)
+                                            ) {
+                                                Row(modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(Icons.Default.Gavel, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
+                                                    Spacer(Modifier.width(2.dp))
+                                                    Text("${employee.pendingSuspensionDays} d", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
                                                 }
                                             }
                                         }
@@ -5104,6 +5119,15 @@ fun EmployeeDetailScreen(
                                 value = "$daysToHealthExpiry Days",
                                 icon = Icons.Default.HealthAndSafety,
                                 containerColor = color.copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if ((employee?.pendingSuspensionDays ?: 0) > 0) {
+                            StatusCard(
+                                label = "Pending Susp.",
+                                value = "${employee?.pendingSuspensionDays} Days",
+                                icon = Icons.Default.Gavel,
+                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
                                 modifier = Modifier.weight(1f)
                             )
                         }
