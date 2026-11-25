@@ -33,6 +33,7 @@ enum class NavigationTab(val title: String, val iconText: String) {
 fun CODMainScreen(
     appEmployees: List<AppEmployee> = emptyList(),
     onRefreshCODReports: (() -> Unit)? = null,
+    onReuploadCODReports: (() -> Unit)? = null,
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -108,7 +109,8 @@ fun CODMainScreen(
                     }
                     NavigationTab.INCIDENT_LOGS -> {
                         IncidentLogsScreen(
-                            onRefresh = onRefreshCODReports
+                            onRefresh = onRefreshCODReports,
+                            onReuploadAll = onReuploadCODReports
                         )
                     }
                     NavigationTab.EMPLOYEES -> {

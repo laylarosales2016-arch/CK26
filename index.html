@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chowking Attendance Summary | Cosmic Portal</title>
+    <link rel="icon" type="image/jpeg" href="https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/sign/backups/chowking/chowking.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8zMmIxMDMyNi1lNzE2LTQ2YTktYjJlNi1lMmNjZGUwN2ZjNmUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYWNrdXBzL2Nob3draW5nL2Nob3draW5nLmpwZyIsImlhdCI6MTc4MDQ5NjcxMCwiZXhwIjoyNTY4ODk2NzEwfQ.9oOjED0SwmUkMpAdopHt50aF2H2tMz5KWx5Mgkt2-j8">
+    <link rel="apple-touch-icon" href="https://uhmjgnwpzsemksxcjpiz.supabase.co/storage/v1/object/sign/backups/chowking/chowking.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8zMmIxMDMyNi1lNzE2LTQ2YTktYjJlNi1lMmNjZGUwN2ZjNmUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYWNrdXBzL2Nob3draW5nL2Nob3draW5nLmpwZyIsImlhdCI6MTc4MDQ5NjcxMCwiZXhwIjoyNTY4ODk2NzEwfQ.9oOjED0SwmUkMpAdopHt50aF2H2tMz5KWx5Mgkt2-j8">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -16,6 +18,125 @@
         } catch (e) {
             console.error("Failed to initialize Supabase:", e);
         }
+    </script>
+    <!-- ISOLATED STANDALONE AUTHENTICATION MODULE (Immune to downstream script errors) -->
+    <script id="core-auth-engine">
+        (function() {
+            window.checkAuth = async function() {
+                var userEl = document.getElementById('sys-user');
+                var passEl = document.getElementById('sys-pass');
+                var error = document.getElementById('auth-error');
+                var btn = document.getElementById('login-btn');
+
+                if (!userEl || !passEl || !error || !btn) return;
+
+                var user = userEl.value.trim();
+                var pass = passEl.value.trim();
+
+                if (!window.sb && window.supabase) {
+                    window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+                var sb = window.sb;
+
+                if (!sb) {
+                    error.innerText = "Access Denied: Terminal Offline";
+                    error.classList.remove('hidden');
+                    return;
+                }
+
+                if (!user || !pass) {
+                    error.innerText = "Access Denied: Credentials Incomplete";
+                    error.classList.remove('hidden');
+                    return;
+                }
+
+                btn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full mx-auto"></div>';
+                btn.disabled = true;
+
+                try {
+                    var { data: settings } = await sb.from('settings').select('key, value').in('key', ['admin_portal_pass', 'medal_portal_pass', 'superadmin_portal_pass', 'chowking_portal_pass']);
+
+                    let adminPass = '';
+                    let medalPass = '';
+                    let superPass = '';
+                    let chowkingPass = '';
+
+                    if (settings) {
+                        var adminSet = settings.find(s => s.key === 'admin_portal_pass');
+                        if (adminSet) adminPass = adminSet.value;
+                        var medalSet = settings.find(s => s.key === 'medal_portal_pass');
+                        if (medalSet) medalPass = medalSet.value;
+                        var superSet = settings.find(s => s.key === 'superadmin_portal_pass');
+                        if (superSet) superPass = superSet.value;
+                        var chowkingSet = settings.find(s => s.key === 'chowking_portal_pass');
+                        if (chowkingSet) chowkingPass = chowkingSet.value;
+                    }
+
+                    const cleanUser = user.toLowerCase();
+                    const cleanPass = pass;
+
+                    if ((cleanUser === 'fusion' || cleanUser === 'admin') && adminPass && cleanPass === adminPass) {
+                        window.AUTH_PASS = adminPass;
+                        window.setSession('admin', 'fusion');
+                        return;
+                    }
+                    if (cleanUser === 'chowking' && ((chowkingPass && cleanPass === chowkingPass) || (adminPass && cleanPass === adminPass))) {
+                        window.AUTH_PASS = chowkingPass || adminPass;
+                        window.setSession('admin', 'chowking');
+                        return;
+                    }
+                    if ((cleanUser === 'nocturnal' || cleanUser === 'superadmin') && superPass && cleanPass === superPass) {
+                        window.SUPER_PASS = superPass;
+                        window.setSession('superadmin', 'fusion');
+                        return;
+                    }
+                    if (cleanUser === 'medal' && medalPass && cleanPass === medalPass) {
+                        window.MEDAL_PASS = medalPass;
+                        window.setSession('medal', 'medal');
+                        return;
+                    }
+
+                    let { data: emp } = await sb.from('employees').select('*').eq('employee_no', user).maybeSingle();
+
+                    if (emp) {
+                        const userPortalPass = emp.portal_password || emp.password_hash;
+                        const isPassValid = userPortalPass && (cleanPass === userPortalPass || (adminPass && cleanPass === adminPass));
+
+                        if (isPassValid) {
+                            sessionStorage.setItem('portal_auth', 'true');
+                            sessionStorage.setItem('portal_role', 'personal');
+                            sessionStorage.setItem('portal_id', emp.employee_no);
+                            window.portalRole = 'personal';
+                            if (typeof window.showVault === 'function') window.showVault(emp);
+                            if (typeof window.initializeData === 'function') window.initializeData();
+                            return;
+                        }
+                    }
+
+                    error.innerText = "Access Denied: Invalid Credentials or Employee ID";
+                    error.classList.remove('hidden');
+                    btn.innerText = 'Establish Uplink';
+                    btn.disabled = false;
+                } catch (err) {
+                    error.innerText = "Sync Error: " + err.message;
+                    error.classList.remove('hidden');
+                    btn.innerText = 'Establish Uplink';
+                    btn.disabled = false;
+                }
+            };
+
+            window.setSession = function(role, id) {
+                sessionStorage.setItem('portal_auth', 'true');
+                sessionStorage.setItem('portal_role', role);
+                sessionStorage.setItem('portal_id', id);
+                window.portalRole = role;
+                var loginCont = document.getElementById('login-container');
+                var portalCont = document.getElementById('portal-container');
+                if (loginCont) loginCont.classList.add('hidden');
+                if (portalCont) portalCont.classList.remove('hidden');
+                if (typeof window.initializeData === 'function') window.initializeData();
+            };
+        })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -117,32 +238,6 @@
         .info-label { font-size: 10px; font-weight: 800; color: #22d3ee; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 4px; display: block; opacity: 0.7; }
         .info-value { font-size: 15px; font-weight: 600; color: #f3f4f6; }
         .section-title { font-size: 11px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.2em; padding-bottom: 8px; margin-bottom: 16px; border-bottom: 1px solid rgba(34, 211, 238, 0.2); display: flex; align-items: center; gap: 8px; }
-
-        .shooting-stars-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
-        }
-        .star {
-            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1); animation: animate 3s linear infinite;
-        }
-        .star::before {
-            content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 300px; height: 1px; background: linear-gradient(90deg, #fff, transparent);
-        }
-        @keyframes animate {
-            0% { transform: rotate(315deg) translateX(0); opacity: 1; }
-            70% { opacity: 1; }
-            100% { transform: rotate(315deg) translateX(-1000px); opacity: 0; }
-        }
-        .star:nth-child(1) { top: 0; right: 0; left: initial; animation-delay: 0s; animation-duration: 1s; }
-        .star:nth-child(2) { top: 0; right: 80px; left: initial; animation-delay: 0.2s; animation-duration: 3s; }
-        .star:nth-child(3) { top: 80px; right: 0px; left: initial; animation-delay: 0.4s; animation-duration: 2s; }
-        .star:nth-child(4) { top: 0; right: 180px; left: initial; animation-delay: 0.6s; animation-duration: 1.5s; }
-        .star:nth-child(5) { top: 0; right: 400px; left: initial; animation-delay: 0.8s; animation-duration: 2.5s; }
-        .star:nth-child(6) { top: 0; right: 600px; left: initial; animation-delay: 1s; animation-duration: 3s; }
-        .star:nth-child(7) { top: 300px; right: 0px; left: initial; animation-delay: 1.2s; animation-duration: 1.75s; }
-        .star:nth-child(8) { top: 0px; right: 700px; left: initial; animation-delay: 1.4s; animation-duration: 1.25s; }
-        .star:nth-child(9) { top: 0px; right: 1000px; left: initial; animation-delay: 0.75s; animation-duration: 2.25s; }
-        .star:nth-child(10) { top: 0px; right: 450px; left: initial; animation-delay: 2.75s; animation-duration: 2.25s; }
 
         /* Scheduler Autofit Fixes */
         .sched-table {
@@ -263,10 +358,6 @@
     </style>
 </head>
 <body class="p-2 md:p-6 min-h-screen flex items-center justify-center">
-
-<div class="shooting-stars-container">
-    <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
-</div>
 
 <!-- Login Section -->
 <div id="login-container" class="glass-card p-6 md:p-8 rounded-3xl w-full max-w-sm text-center">
@@ -1348,86 +1439,7 @@
     var weekDays = [];
     var currentAppraisals = [], editingAppraisal = null, appRatings = [0,0,0,0,0], appQtr = 1;
 
-    async function checkAuth() {
-        var user = document.getElementById('sys-user').value.trim();
-        var pass = document.getElementById('sys-pass').value.trim();
-        var error = document.getElementById('auth-error');
-        var btn = document.getElementById('login-btn');
-
-        // Final fallback for Supabase client
-        if (!window.sb && window.supabase) {
-            window.sb = window.supabase.createClient('https://uhmjgnwpzsemksxcjpiz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWpnbndwenNlbWtzeGNqcGl6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODMyNDU2NCwiZXhwIjoyMDkzOTAwNTY0fQ.SVdNjQlocvBEwwxl2K_7BMT94vUq5fkNRev65fXrvyc');
-        }
-        var sb = window.sb;
-
-        if (!sb) {
-            error.innerText = "Access Denied: Terminal Offline";
-            error.classList.remove('hidden');
-            console.error("Supabase client not initialized.");
-            return;
-        }
-
-        if (!user || !pass) {
-            error.innerText = "Access Denied: Credentials Incomplete";
-            error.classList.remove('hidden');
-            return;
-        }
-
-        btn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full mx-auto"></div>'; btn.disabled = true;
-        try {
-            if (!AUTH_PASS || !MEDAL_PASS || !SUPER_PASS) {
-                try {
-                    var { data: settings } = await sb.from('settings').select('key, value').in('key', ['admin_portal_pass', 'medal_portal_pass', 'superadmin_portal_pass']);
-                    if (settings) {
-                        var adminSet = settings.find(function(s) { return s.key === 'admin_portal_pass'; });
-                        AUTH_PASS = adminSet ? adminSet.value : 'fusion2026';
-                        var medalSet = settings.find(function(s) { return s.key === 'medal_portal_pass'; });
-                        MEDAL_PASS = medalSet ? medalSet.value : 'medal2026';
-                        var superSet = settings.find(function(s) { return s.key === 'superadmin_portal_pass'; });
-                        SUPER_PASS = superSet ? superSet.value : 'nocturnal';
-                    }
-                } catch (e) {}
-            }
-
-            const cleanUser = user.trim().toLowerCase();
-            const cleanPass = pass.trim();
-
-            if ((cleanUser === 'fusion' || cleanUser === 'admin') && (cleanPass === AUTH_PASS || cleanPass === 'fusion2026' || cleanPass === 'chowking2026' || cleanPass === 'admin' || cleanPass === 'admin2026')) { setSession('admin', 'fusion'); return; }
-            if (cleanUser === 'chowking' && (cleanPass === 'chowking2026' || cleanPass === 'fusion2026' || cleanPass === 'admin')) { setSession('admin', 'chowking'); return; }
-            if ((cleanUser === 'nocturnal' || cleanUser === 'superadmin') && (cleanPass === SUPER_PASS || cleanPass === 'nocturnal' || cleanPass === 'fusion2026')) { setSession('superadmin', 'fusion'); return; }
-            if (cleanUser === 'medal' && (cleanPass === MEDAL_PASS || cleanPass === 'medal2026')) { setSession('medal', 'medal'); return; }
-
-            let { data: emp, error: empError } = await sb.from('employees').select('*').eq('employee_no', user.trim()).maybeSingle();
-
-            if (emp) {
-                const isPassValid = !cleanPass ||
-                    emp.portal_password === cleanPass ||
-                    emp.password_hash === cleanPass ||
-                    cleanPass === 'chowking2026' ||
-                    cleanPass === 'fusion2026' ||
-                    cleanPass === '123456' ||
-                    cleanPass === emp.employee_no;
-
-                if (isPassValid) {
-                    sessionStorage.setItem('portal_auth', 'true');
-                    sessionStorage.setItem('portal_role', 'personal');
-                    sessionStorage.setItem('portal_id', emp.employee_no);
-                    portalRole = 'personal';
-                    showVault(emp);
-                    initializeData();
-                    return;
-                }
-            }
-
-            error.innerText = "Access Denied: Invalid Credentials or Employee ID";
-            error.classList.remove('hidden');
-            btn.innerText = 'Establish Uplink'; btn.disabled = false;
-        } catch (err) {
-            error.innerText = "Sync Error: " + err.message; error.classList.remove('hidden');
-            btn.innerText = 'Establish Uplink'; btn.disabled = false;
-        }
-    };
-    window.checkAuth = checkAuth;
+    // Core Auth is handled by isolated #core-auth-engine script in head
 
     async function openAppraisalHistory() {
         if (!currentVaultEmp) return;
@@ -3777,7 +3789,10 @@
                 <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
                     <div class="w-full flex items-center justify-between mb-3 px-2">
                         <span id="report-photo-title" class="text-xs font-black text-cyan-400 uppercase tracking-widest">Report Photo</span>
-                        <button onclick="document.getElementById('report-photo-modal').classList.add('hidden')" class="bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-500/30 transition-all">Close ✕</button>
+                        <div class="flex items-center gap-2">
+                            <a id="report-photo-open-btn" href="#" target="_blank" class="bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-3 py-1.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500/20 transition-all flex items-center gap-1.5"><i class="fa-solid fa-up-right-from-square text-[10px]"></i> Open Link</a>
+                            <button onclick="document.getElementById('report-photo-modal').classList.add('hidden')" class="bg-rose-500/20 border border-rose-500/30 text-rose-400 px-3 py-1.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-500/30 transition-all">Close ✕</button>
+                        </div>
                     </div>
                     <div class="w-full max-h-[80vh] flex items-center justify-center overflow-auto rounded-2xl border border-white/10 bg-space-950 p-2 shadow-2xl">
                         <img id="report-photo-img" src="" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg">
@@ -3786,8 +3801,10 @@
             document.body.appendChild(modal);
         }
 
+        const formatted = formatWebDriveUrl(url);
         document.getElementById('report-photo-title').innerText = title || 'Attached Photo Preview';
-        document.getElementById('report-photo-img').src = url;
+        document.getElementById('report-photo-img').src = formatted;
+        document.getElementById('report-photo-open-btn').href = formatted;
         modal.classList.remove('hidden');
     }
 

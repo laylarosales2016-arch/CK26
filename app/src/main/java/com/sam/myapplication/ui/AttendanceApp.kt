@@ -785,6 +785,8 @@ fun AttendanceApp(viewModel: AttendanceViewModel) {
                     }
                     com.example.cod.ui.CODMainScreen(
                         appEmployees = employees,
+                        onRefreshCODReports = { viewModel.fetchCODReports() },
+                        onReuploadCODReports = { viewModel.reuploadAllCODReports() },
                         onBack = { navController.popBackStack() }
                     )
                 }

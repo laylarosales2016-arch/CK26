@@ -1300,6 +1300,23 @@ class AttendanceViewModel(
         }
     }
 
+    fun reuploadAllCODReports(onComplete: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _syncStatus.value = "Reuploading COD reports & photos..."
+            val success = supabaseSync.reuploadAllCODReports { current, total ->
+                _syncStatus.value = "Reuploading report $current of $total..."
+            }
+            if (success) {
+                _syncStatus.value = "✅ All COD reports & photos reuploaded successfully!"
+            } else {
+                _syncStatus.value = "⚠️ Reupload completed with errors."
+            }
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke(success)
+            }
+        }
+    }
+
     fun syncSchedulerData() {
         viewModelScope.launch {
             _syncStatus.value = "Syncing scheduler data..."

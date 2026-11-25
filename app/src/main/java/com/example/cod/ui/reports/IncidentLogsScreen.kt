@@ -41,12 +41,14 @@ import java.util.Locale
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IncidentLogsScreen(
-    onRefresh: (() -> Unit)? = null
+    onRefresh: (() -> Unit)? = null,
+    onReuploadAll: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val reports by CODRepository.reportsFlow.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
+    var isReuploading by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf<ReportStatus?>(null) }
@@ -147,6 +149,31 @@ fun IncidentLogsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        OutlinedButton(
+                            onClick = {
+                                if (!isReuploading) {
+                                    isReuploading = true
+                                    onReuploadAll?.invoke()
+                                    scope.launch {
+                                        kotlinx.coroutines.delay(2000)
+                                        isReuploading = false
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            if (isReuploading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reuploading...", style = MaterialTheme.typography.labelMedium)
+                            } else {
+                                Text("📤 Reupload", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
                         OutlinedButton(
                             onClick = {
                                 if (!isRefreshing) {

@@ -1102,31 +1102,114 @@ class SupabaseSyncManager(
 
     suspend fun uploadCODReport(report: com.example.cod.model.IncidentReport) {
         try {
+            val driveComplaintUris = report.complaintFormUris.mapIndexed { idx, uri ->
+                val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_ComplaintForm_${idx}_${System.currentTimeMillis()}.jpg"
+                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+            }
+
+            val driveIrUris = report.employeeIrPhotoUris.mapIndexed { idx, uri ->
+                val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_EmployeeIR_${idx}_${System.currentTimeMillis()}.jpg"
+                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+            }
+
+            val driveRtwUris = report.rtwFusionFormUris.mapIndexed { idx, uri ->
+                val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_RTWFusion_${idx}_${System.currentTimeMillis()}.jpg"
+                com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+            }
+
+            val updatedReport = report.copy(
+                complaintFormUris = driveComplaintUris,
+                employeeIrPhotoUris = driveIrUris,
+                rtwFusionFormUris = driveRtwUris
+            )
+
             val payload = buildJsonObject {
-                put("id", JsonPrimitive(report.id))
-                put("title", JsonPrimitive(report.title))
-                put("offender_name", JsonPrimitive(report.offenderName))
-                put("incident_source", JsonPrimitive(report.incidentSource))
-                put("date", JsonPrimitive(report.date))
-                put("incident_date", JsonPrimitive(report.incidentDate))
-                put("incident_time", JsonPrimitive(report.incidentTime))
-                put("rule_id", if (report.ruleId != null) JsonPrimitive(report.ruleId) else JsonNull)
-                put("rule_description", JsonPrimitive(report.ruleDescription))
-                put("category", if (report.category != null) JsonPrimitive(report.category.name) else JsonNull)
-                put("offense_count", JsonPrimitive(report.offenseCount))
-                put("recommended_penalty", JsonPrimitive(report.recommendedPenalty))
-                put("details", JsonPrimitive(report.details))
-                put("complaint_form_uris", json.encodeToJsonElement(report.complaintFormUris))
-                put("employee_ir_photo_uris", json.encodeToJsonElement(report.employeeIrPhotoUris))
-                put("rtw_fusion_form_uris", json.encodeToJsonElement(report.rtwFusionFormUris))
-                put("status", JsonPrimitive(report.status.name))
-                put("validity", JsonPrimitive(report.validity.name))
-                put("timestamp", JsonPrimitive(report.timestamp))
+                put("id", JsonPrimitive(updatedReport.id))
+                put("title", JsonPrimitive(updatedReport.title))
+                put("offender_name", JsonPrimitive(updatedReport.offenderName))
+                put("incident_source", JsonPrimitive(updatedReport.incidentSource))
+                put("date", JsonPrimitive(updatedReport.date))
+                put("incident_date", JsonPrimitive(updatedReport.incidentDate))
+                put("incident_time", JsonPrimitive(updatedReport.incidentTime))
+                put("rule_id", if (updatedReport.ruleId != null) JsonPrimitive(updatedReport.ruleId) else JsonNull)
+                put("rule_description", JsonPrimitive(updatedReport.ruleDescription))
+                put("category", if (updatedReport.category != null) JsonPrimitive(updatedReport.category.name) else JsonNull)
+                put("offense_count", JsonPrimitive(updatedReport.offenseCount))
+                put("recommended_penalty", JsonPrimitive(updatedReport.recommendedPenalty))
+                put("details", JsonPrimitive(updatedReport.details))
+                put("complaint_form_uris", json.encodeToJsonElement(updatedReport.complaintFormUris))
+                put("employee_ir_photo_uris", json.encodeToJsonElement(updatedReport.employeeIrPhotoUris))
+                put("rtw_fusion_form_uris", json.encodeToJsonElement(updatedReport.rtwFusionFormUris))
+                put("status", JsonPrimitive(updatedReport.status.name))
+                put("validity", JsonPrimitive(updatedReport.validity.name))
+                put("timestamp", JsonPrimitive(updatedReport.timestamp))
             }
             client.postgrest["cod_incident_reports"].upsert(payload) { onConflict = "id" }
-            Log.d("SupabaseSyncManager", "Uploaded COD report: ${report.id}")
+            Log.d("SupabaseSyncManager", "Uploaded COD report to Supabase with Drive URLs: ${updatedReport.id}")
         } catch (e: Exception) {
             Log.e("SupabaseSyncManager", "Failed to upload COD report: ${e.message}")
+        }
+    }
+
+    suspend fun reuploadAllCODReports(onProgress: ((Int, Int) -> Unit)? = null): Boolean {
+        return try {
+            val localReports = com.example.cod.data.CODRepository.reportsFlow.value
+            Log.d("SupabaseSyncManager", "Starting reupload of ${localReports.size} local COD reports...")
+
+            localReports.forEachIndexed { index, report ->
+                onProgress?.invoke(index + 1, localReports.size)
+
+                val driveComplaintUris = report.complaintFormUris.mapIndexed { idx, uri ->
+                    val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_ComplaintForm_${idx}_${System.currentTimeMillis()}.jpg"
+                    com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                }
+
+                val driveIrUris = report.employeeIrPhotoUris.mapIndexed { idx, uri ->
+                    val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_EmployeeIR_${idx}_${System.currentTimeMillis()}.jpg"
+                    com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                }
+
+                val driveRtwUris = report.rtwFusionFormUris.mapIndexed { idx, uri ->
+                    val fileName = "${report.offenderName.replace(Regex("[^a-zA-Z0-9_-]"), "_")}_RTWFusion_${idx}_${System.currentTimeMillis()}.jpg"
+                    com.sam.myapplication.util.GoogleDriveSyncManager.uploadPhotoToGoogleDriveIfNotUploaded(context, uri, fileName)
+                }
+
+                val updatedReport = report.copy(
+                    complaintFormUris = driveComplaintUris,
+                    employeeIrPhotoUris = driveIrUris,
+                    rtwFusionFormUris = driveRtwUris
+                )
+
+                com.example.cod.data.CODRepository.updateReport(updatedReport, context)
+
+                val payload = buildJsonObject {
+                    put("id", JsonPrimitive(updatedReport.id))
+                    put("title", JsonPrimitive(updatedReport.title))
+                    put("offender_name", JsonPrimitive(updatedReport.offenderName))
+                    put("incident_source", JsonPrimitive(updatedReport.incidentSource))
+                    put("date", JsonPrimitive(updatedReport.date))
+                    put("incident_date", JsonPrimitive(updatedReport.incidentDate))
+                    put("incident_time", JsonPrimitive(updatedReport.incidentTime))
+                    put("rule_id", if (updatedReport.ruleId != null) JsonPrimitive(updatedReport.ruleId) else JsonNull)
+                    put("rule_description", JsonPrimitive(updatedReport.ruleDescription))
+                    put("category", if (updatedReport.category != null) JsonPrimitive(updatedReport.category.name) else JsonNull)
+                    put("offense_count", JsonPrimitive(updatedReport.offenseCount))
+                    put("recommended_penalty", JsonPrimitive(updatedReport.recommendedPenalty))
+                    put("details", JsonPrimitive(updatedReport.details))
+                    put("complaint_form_uris", json.encodeToJsonElement(updatedReport.complaintFormUris))
+                    put("employee_ir_photo_uris", json.encodeToJsonElement(updatedReport.employeeIrPhotoUris))
+                    put("rtw_fusion_form_uris", json.encodeToJsonElement(updatedReport.rtwFusionFormUris))
+                    put("status", JsonPrimitive(updatedReport.status.name))
+                    put("validity", JsonPrimitive(updatedReport.validity.name))
+                    put("timestamp", JsonPrimitive(updatedReport.timestamp))
+                }
+                client.postgrest["cod_incident_reports"].upsert(payload) { onConflict = "id" }
+                Log.d("SupabaseSyncManager", "Reuploaded report ${index + 1}/${localReports.size}: ${updatedReport.id}")
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("SupabaseSyncManager", "Failed to reupload COD reports: ${e.message}")
+            false
         }
     }
 
