@@ -121,20 +121,20 @@ fun IncidentLogsScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column {
                         Text(
                             text = "INCIDENT LOGS & RECORDS",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                         Spacer(modifier = Modifier.height(2.dp))
@@ -145,69 +145,76 @@ fun IncidentLogsScreen(
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = {
-                                if (!isReuploading) {
-                                    isReuploading = true
-                                    onReuploadAll?.invoke()
-                                    scope.launch {
-                                        kotlinx.coroutines.delay(2000)
-                                        isReuploading = false
+                        item {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!isReuploading) {
+                                        isReuploading = true
+                                        onReuploadAll?.invoke()
+                                        scope.launch {
+                                            kotlinx.coroutines.delay(2000)
+                                            isReuploading = false
+                                        }
                                     }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                if (isReuploading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Reuploading...", style = MaterialTheme.typography.labelMedium)
+                                } else {
+                                    Text("📤 Reupload", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 }
-                            },
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            if (isReuploading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Reuploading...", style = MaterialTheme.typography.labelMedium)
-                            } else {
-                                Text("📤 Reupload", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        OutlinedButton(
-                            onClick = {
-                                if (!isRefreshing) {
-                                    isRefreshing = true
-                                    onRefresh?.invoke()
-                                    scope.launch {
-                                        kotlinx.coroutines.delay(1200)
-                                        isRefreshing = false
+                        item {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!isRefreshing) {
+                                        isRefreshing = true
+                                        onRefresh?.invoke()
+                                        scope.launch {
+                                            kotlinx.coroutines.delay(1200)
+                                            isRefreshing = false
+                                        }
                                     }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                if (isRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Syncing...", style = MaterialTheme.typography.labelMedium)
+                                } else {
+                                    Text("🔄 Refresh", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 }
-                            },
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            if (isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Syncing...", style = MaterialTheme.typography.labelMedium)
-                            } else {
-                                Text("🔄 Refresh", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        Button(
-                            onClick = { isFilterPanelExpanded = !isFilterPanelExpanded },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (hasActiveFilters) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        item {
+                            Button(
+                                onClick = { isFilterPanelExpanded = !isFilterPanelExpanded },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = if (hasActiveFilters) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
                                 Text(
                                     text = if (hasActiveFilters) "🔍 Filtered" else "🔍 Search & Filter",
                                     fontWeight = FontWeight.Bold,
