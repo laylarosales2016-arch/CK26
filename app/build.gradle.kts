@@ -13,8 +13,8 @@ android {
         applicationId = "com.sam.myapplication"
         minSdk = 24
         targetSdk = 36
-        versionCode = 56
-        versionName = "56"
+        versionCode = 57
+        versionName = "57"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
